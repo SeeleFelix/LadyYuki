@@ -43,19 +43,48 @@
 		sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		visualStore.setState('dialogue');
 
-		// Start directly with goddess greeting
-		setTimeout(() => {
+		// Fetch the opening question from the goddess
+		fetchOpeningQuestion();
+	});
+
+	async function fetchOpeningQuestion() {
+		phase = 'loading';
+
+		try {
+			const response = await fetch('/api/chat', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					message: '__START__',
+					sessionId
+				})
+			});
+
+			const data = await response.json();
+
 			const greetingMessage: Message = {
 				role: 'assistant',
-				content: 'Ah, you chose to step forward. Welcome, traveler.'
+				content: data.message
 			};
 			conversationStore.addMessage(greetingMessage);
 			lastAssistantMessage = greetingMessage;
 			allMessages = [greetingMessage];
 			messageKey++;
 			phase = 'waiting-input';
-		}, 800);
-	});
+		} catch (error) {
+			console.error('Failed to get opening question:', error);
+			// Fallback question
+			const fallbackMessage: Message = {
+				role: 'assistant',
+				content: 'If a machine could truly think, would its thoughts be any less real than yours?'
+			};
+			conversationStore.addMessage(fallbackMessage);
+			lastAssistantMessage = fallbackMessage;
+			allMessages = [fallbackMessage];
+			messageKey++;
+			phase = 'waiting-input';
+		}
+	}
 
 	function handleSendMessage(message: string) {
 		if (!message.trim()) return;

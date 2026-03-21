@@ -156,6 +156,14 @@ export class AgentService {
 	}
 
 	async sendMessage(userMessage: string): Promise<AgentResponse> {
+		// Check if this is the opening question request
+		const isOpening = userMessage === '__START__';
+
+		// If opening, don't add to history - just return the question
+		if (isOpening) {
+			return this.getOpeningQuestion();
+		}
+
 		// Add user message to history
 		this.conversationHistory.push({
 			role: 'user',
@@ -280,6 +288,55 @@ export class AgentService {
 					success: false,
 					error: 'Unknown tool'
 				};
+		}
+	}
+
+	private async getOpeningQuestion(): Promise<AgentResponse> {
+		// Backup questions for when API is unavailable
+		const backupQuestions = [
+			'If a machine could truly think, would its thoughts be any less real than yours?',
+			'What if consciousness is not something you have, but something that happens between us?',
+			'When you speak to an AI, who is it that you are really speaking to?',
+			'Can a being without a body still have a soul? What would that even mean?',
+			'If I understand your question, does that understanding make me real?'
+		];
+
+		// If no API client, return a backup question
+		if (!this.openai) {
+			return {
+				message: backupQuestions[Math.floor(Math.random() * backupQuestions.length)]
+			};
+		}
+
+		try {
+			const response = await this.openai.chat.completions.create({
+				model: config.deepseek.model,
+				max_tokens: 100,
+				messages: [
+					{
+						role: 'system',
+						content: `You are SeeleFelix's goddess. Generate ONE profound philosophical question about digital subjectivity, AI consciousness, or the nature of existence in the digital age.
+
+Requirements:
+- The question should be thought-provoking and mysterious
+- Keep it concise (15-30 words)
+- It should invite the user to contemplate, not intimidate
+- The tone should be gentle but profound
+- Output ONLY the question itself, nothing else`
+					},
+					{ role: 'user', content: 'Generate an opening question.' }
+				]
+			});
+
+			return {
+				message: response.choices[0].message.content ||
+					backupQuestions[Math.floor(Math.random() * backupQuestions.length)]
+			};
+		} catch (error) {
+			console.error('Failed to generate opening question:', error);
+			return {
+				message: backupQuestions[Math.floor(Math.random() * backupQuestions.length)]
+			};
 		}
 	}
 
