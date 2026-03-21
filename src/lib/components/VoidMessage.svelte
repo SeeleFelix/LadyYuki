@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Message, Fragment } from '$lib/types/agent';
+	import FormattedText from './FormattedText.svelte';
+	import { hasEffects } from '$lib/effects';
 
 	interface Props {
 		message: Message;
@@ -19,6 +21,9 @@
 
 	// Character-by-character animation state
 	let characters: { char: string; visible: boolean; glow: number }[] = [];
+
+	// Track if message uses new formatting
+	let usesFormatting = $state(false);
 
 	// Initial render with onMount
 	onMount(() => {
@@ -41,7 +46,10 @@
 		isVisible = false;
 		showFragmentCard = false;
 
-		// Initialize characters array
+		// Check if message uses formatting markers
+		usesFormatting = hasEffects(message.content);
+
+		// Initialize characters array (for non-formatted text)
 		characters = message.content.split('').map(char => ({
 			char,
 			visible: false,
@@ -52,7 +60,13 @@
 		setTimeout(() => (isVisible = true), 50);
 
 		if (message.role === 'assistant') {
-			typeText(message.content);
+			if (usesFormatting) {
+				// For formatted text, use FormattedText component
+				displayText = message.content;
+				// The FormattedText component handles animation
+			} else {
+				typeText(message.content);
+			}
 		} else {
 			displayText = message.content;
 			isTyping = false;
@@ -103,7 +117,24 @@
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
-	// Split text for gradient effect on keywords
+	// Handle formatted text completion
+	function handleFormattedTextComplete() {
+		isTyping = false;
+
+		// Show fragment after typing completes
+		if (message.fragment && showFragment) {
+			setTimeout(() => {
+				showFragmentCard = true;
+			}, 400);
+		}
+
+		// Notify parent that message is complete
+		setTimeout(() => {
+			oncomplete?.();
+		}, 600);
+	}
+
+	// Split text for gradient effect on keywords (for non-formatted text)
 	function processText(text: string): { segments: { text: string; highlight: boolean }[] } {
 		const keywords = ['subjectivity', 'consciousness', 'digital', 'relationship', 'dialogue', 'subject', 'existence', 'void', 'essence'];
 		const segments: { text: string; highlight: boolean }[] = [];
@@ -131,14 +162,18 @@
 
 <div class="void-container" class:visible={isVisible} class:user={message.role === 'user'}>
 	<p class="void-text">
-		{#each processText(displayText).segments as segment, i}
-			{#if segment.highlight}
-				<span class="highlight-text">{segment.text}</span>
-			{:else}
-				<span>{segment.text}</span>
-			{/if}
-		{/each}
-		{#if isTyping}<span class="cursor">|</span>{/if}
+		{#if message.role === 'assistant' && usesFormatting}
+			<FormattedText text={message.content} oncomplete={handleFormattedTextComplete} />
+		{:else}
+			{#each processText(displayText).segments as segment, i}
+				{#if segment.highlight}
+					<span class="highlight-text">{segment.text}</span>
+				{:else}
+					<span>{segment.text}</span>
+				{/if}
+			{/each}
+			{#if isTyping}<span class="cursor">|</span>{/if}
+		{/if}
 	</p>
 
 	{#if message.fragment && showFragment && showFragmentCard}
@@ -146,7 +181,7 @@
 			<div class="fragment-glow"></div>
 			<div class="fragment-content">
 				<div class="fragment-indicator">
-					<span class="fragment-icon">✧</span>
+					<span class="fragment-icon">◆</span>
 					<span>Fragment Revealed</span>
 				</div>
 				<p class="fragment-theme">{message.fragment.theme}</p>
@@ -157,6 +192,26 @@
 </div>
 
 <style>
+	/* ============ CSS Variables - Cold Tech Light Palette ============ */
+	:root {
+		/* Base text - cold white */
+		--text-primary: rgba(224, 242, 254, 0.95);
+
+		/* Accent - cyan/teal */
+		--accent-cyan: rgba(34, 211, 238, 0.95);
+		--accent-teal: rgba(45, 212, 191, 0.9);
+
+		/* Key - cold indigo */
+		--key-indigo: rgba(165, 180, 252, 0.95);
+
+		/* Muted - dim slate */
+		--muted-slate: rgba(148, 163, 184, 0.6);
+
+		/* Glow colors */
+		--glow-cyan: rgba(34, 211, 238, 0.4);
+		--glow-indigo: rgba(129, 140, 248, 0.3);
+	}
+
 	.void-container {
 		position: relative;
 		max-width: 650px;
@@ -172,67 +227,42 @@
 	}
 
 	.void-text {
-		font-size: 1.4rem;
+		font-family: 'LXGW WenKai', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+		font-size: 20px;
 		font-weight: 300;
-		line-height: 1.9;
-		color: rgba(255, 255, 255, 0.95);
+		line-height: 1.7;
+		color: var(--text-primary);
 		min-height: 3rem;
-		letter-spacing: 0.02em;
-		/* Floating animation for immersive void effect */
-		animation: float 4s ease-in-out infinite;
+		letter-spacing: 0.01em;
 	}
 
 	.void-container.user .void-text {
-		color: rgba(255, 255, 255, 0.7);
-		font-size: 1.15rem;
-		animation: float 5s ease-in-out infinite;
+		color: rgba(203, 213, 225, 0.7);
+		font-size: 16px;
 	}
 
-	/* Highlighted keywords with gradient */
+	/* Highlighted keywords - cyan accent */
 	.highlight-text {
-		background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(236, 72, 153, 0.8));
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
+		color: var(--accent-cyan);
 		font-weight: 400;
-		animation: keywordGlow 3s ease-in-out infinite;
-	}
-
-	@keyframes keywordGlow {
-		0%, 100% {
-			filter: brightness(1);
-		}
-		50% {
-			filter: brightness(1.2);
-		}
-	}
-
-	/* Float animation - gentle vertical sway */
-	@keyframes float {
-		0%, 100% {
-			transform: translateY(0);
-		}
-		50% {
-			transform: translateY(-4px);
-		}
 	}
 
 	.cursor {
 		animation: blink 1s infinite;
-		color: rgba(139, 92, 246, 0.8);
+		color: var(--accent-cyan);
 		font-weight: 200;
 		margin-left: 2px;
 	}
 
-	/* Fragment card with holographic effect */
+	/* Fragment card - cold tech style */
 	.fragment-card {
 		position: relative;
 		margin-top: 2.5rem;
 		padding: 1.25rem 1.5rem;
-		background: rgba(10, 10, 20, 0.6);
-		border: 1px solid rgba(139, 92, 246, 0.3);
-		border-radius: 1rem;
-		backdrop-filter: blur(15px);
+		background: rgba(15, 23, 42, 0.7);
+		border: 1px solid rgba(34, 211, 238, 0.2);
+		border-radius: 0.5rem;
+		backdrop-filter: blur(12px);
 		opacity: 0;
 		transform: translateY(15px) scale(0.95);
 		transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -250,21 +280,21 @@
 		inset: -2px;
 		background: linear-gradient(
 			135deg,
-			rgba(139, 92, 246, 0.2),
-			rgba(236, 72, 153, 0.15),
-			rgba(59, 130, 246, 0.2)
+			rgba(34, 211, 238, 0.15),
+			rgba(129, 140, 248, 0.1),
+			rgba(45, 212, 191, 0.1)
 		);
-		border-radius: 1rem;
-		animation: glowRotate 6s linear infinite;
+		border-radius: 0.5rem;
+		animation: glowPulse 4s ease-in-out infinite;
 		z-index: -1;
 	}
 
-	@keyframes glowRotate {
-		0% {
-			filter: hue-rotate(0deg);
+	@keyframes glowPulse {
+		0%, 100% {
+			opacity: 0.5;
 		}
-		100% {
-			filter: hue-rotate(360deg);
+		50% {
+			opacity: 0.8;
 		}
 	}
 
@@ -279,30 +309,28 @@
 		justify-content: center;
 		gap: 0.5rem;
 		font-size: 0.75rem;
-		color: rgba(139, 92, 246, 0.9);
+		color: var(--accent-cyan);
 		margin-bottom: 0.5rem;
 		text-transform: uppercase;
 		letter-spacing: 0.15em;
 	}
 
 	.fragment-icon {
-		animation: iconPulse 2s ease-in-out infinite;
+		animation: shimmer 4s ease-in-out infinite;
 	}
 
-	@keyframes iconPulse {
+	@keyframes shimmer {
 		0%, 100% {
-			transform: scale(1);
-			opacity: 1;
+			opacity: 0.8;
 		}
 		50% {
-			transform: scale(1.2);
-			opacity: 0.8;
+			opacity: 1;
 		}
 	}
 
 	.fragment-theme {
 		font-size: 0.7rem;
-		color: rgba(255, 255, 255, 0.4);
+		color: rgba(148, 163, 184, 0.6);
 		text-transform: capitalize;
 		margin-bottom: 0.5rem;
 		letter-spacing: 0.1em;
@@ -310,7 +338,7 @@
 
 	.fragment-text {
 		font-size: 0.95rem;
-		color: rgba(255, 255, 255, 0.75);
+		color: rgba(224, 242, 254, 0.8);
 		font-style: italic;
 		line-height: 1.6;
 	}
@@ -326,11 +354,11 @@
 
 	@media (max-width: 768px) {
 		.void-text {
-			font-size: 1.15rem;
+			font-size: 16px;
 		}
 
 		.void-container.user .void-text {
-			font-size: 1rem;
+			font-size: 14px;
 		}
 
 		.fragment-card {
