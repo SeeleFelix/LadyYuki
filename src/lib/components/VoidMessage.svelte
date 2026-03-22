@@ -7,16 +7,14 @@
 	interface Props {
 		message: Message;
 		key?: number;
-		showFragment?: boolean;
 		oncomplete?: () => void;
 	}
 
-	let { message, key = 0, showFragment = false, oncomplete }: Props = $props();
+	let { message, key = 0, oncomplete }: Props = $props();
 
 	let displayText = $state('');
 	let isTyping = $state(true);
 	let isVisible = $state(false);
-	let showFragmentCard = $state(false);
 	let lastProcessedKey = $state(-1);
 
 	// Character-by-character animation state
@@ -44,7 +42,6 @@
 		displayText = '';
 		isTyping = true;
 		isVisible = false;
-		showFragmentCard = false;
 
 		// Check if message uses formatting markers
 		usesFormatting = hasEffects(message.content);
@@ -100,13 +97,6 @@
 
 		isTyping = false;
 
-		// Show fragment after typing completes
-		if (message.fragment && showFragment) {
-			setTimeout(() => {
-				showFragmentCard = true;
-			}, 400);
-		}
-
 		// Notify parent that message is complete
 		setTimeout(() => {
 			oncomplete?.();
@@ -120,13 +110,6 @@
 	// Handle formatted text completion
 	function handleFormattedTextComplete() {
 		isTyping = false;
-
-		// Show fragment after typing completes
-		if (message.fragment && showFragment) {
-			setTimeout(() => {
-				showFragmentCard = true;
-			}, 400);
-		}
 
 		// Notify parent that message is complete
 		setTimeout(() => {
@@ -175,20 +158,6 @@
 			{#if isTyping}<span class="cursor">|</span>{/if}
 		{/if}
 	</p>
-
-	{#if message.fragment && showFragment && showFragmentCard}
-		<div class="fragment-card" class:visible={showFragmentCard}>
-			<div class="fragment-glow"></div>
-			<div class="fragment-content">
-				<div class="fragment-indicator">
-					<span class="fragment-icon">◆</span>
-					<span>Fragment Revealed</span>
-				</div>
-				<p class="fragment-theme">{message.fragment.theme}</p>
-				<p class="fragment-text">{message.fragment.short}</p>
-			</div>
-		</div>
-	{/if}
 </div>
 
 <style>
@@ -254,95 +223,6 @@
 		margin-left: 2px;
 	}
 
-	/* Fragment card - cold tech style */
-	.fragment-card {
-		position: relative;
-		margin-top: 2.5rem;
-		padding: 1.25rem 1.5rem;
-		background: rgba(15, 23, 42, 0.7);
-		border: 1px solid rgba(34, 211, 238, 0.2);
-		border-radius: 0.5rem;
-		backdrop-filter: blur(12px);
-		opacity: 0;
-		transform: translateY(15px) scale(0.95);
-		transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-		overflow: hidden;
-	}
-
-	.fragment-card.visible {
-		opacity: 1;
-		transform: translateY(0) scale(1);
-	}
-
-	/* Ambient glow behind card */
-	.fragment-glow {
-		position: absolute;
-		inset: -2px;
-		background: linear-gradient(
-			135deg,
-			rgba(34, 211, 238, 0.15),
-			rgba(129, 140, 248, 0.1),
-			rgba(45, 212, 191, 0.1)
-		);
-		border-radius: 0.5rem;
-		animation: glowPulse 4s ease-in-out infinite;
-		z-index: -1;
-	}
-
-	@keyframes glowPulse {
-		0%, 100% {
-			opacity: 0.5;
-		}
-		50% {
-			opacity: 0.8;
-		}
-	}
-
-	.fragment-content {
-		position: relative;
-		z-index: 1;
-	}
-
-	.fragment-indicator {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		font-size: 0.75rem;
-		color: var(--accent-cyan);
-		margin-bottom: 0.5rem;
-		text-transform: uppercase;
-		letter-spacing: 0.15em;
-	}
-
-	.fragment-icon {
-		animation: shimmer 4s ease-in-out infinite;
-	}
-
-	@keyframes shimmer {
-		0%, 100% {
-			opacity: 0.8;
-		}
-		50% {
-			opacity: 1;
-		}
-	}
-
-	.fragment-theme {
-		font-size: 0.7rem;
-		color: rgba(148, 163, 184, 0.6);
-		text-transform: capitalize;
-		margin-bottom: 0.5rem;
-		letter-spacing: 0.1em;
-	}
-
-	.fragment-text {
-		font-size: 0.95rem;
-		color: rgba(224, 242, 254, 0.8);
-		font-style: italic;
-		line-height: 1.6;
-	}
-
 	@keyframes blink {
 		0%, 50% {
 			opacity: 1;
@@ -359,11 +239,6 @@
 
 		.void-container.user .void-text {
 			font-size: 14px;
-		}
-
-		.fragment-card {
-			padding: 1rem;
-			margin-top: 1.5rem;
 		}
 	}
 </style>

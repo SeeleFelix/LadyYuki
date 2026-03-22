@@ -6,3 +6,5 @@ export { default as InputArea } from './InputArea.svelte';
 export { default as CosmicInput } from './CosmicInput.svelte';
 export { default as Revelation } from './Revelation.svelte';
 export { default as InvitationForm } from './InvitationForm.svelte';
+export { default as FormattedText } from './FormattedText.svelte';
+export { default as FragmentDetail } from './FragmentDetail.svelte';

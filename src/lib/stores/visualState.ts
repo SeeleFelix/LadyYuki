@@ -1,5 +1,5 @@
 import { writable, derived } from 'svelte/store';
-import type { Star, ConstellationLine, VisualState, VisualStoreState } from '$lib/types/agent';
+import type { Star, ConstellationLine, VisualState, VisualStoreState, Fragment } from '$lib/types/agent';
 
 function createVisualStore() {
 	const initialState: VisualStoreState = {
@@ -17,7 +17,7 @@ function createVisualStore() {
 		setState: (newState: VisualState) => {
 			update((state) => ({ ...state, state: newState }));
 		},
-		addStar: (star: Omit<Star, 'id' | 'createdAt'>) => {
+		addStar: (star: Omit<Star, 'id' | 'createdAt'> & { fragment?: Fragment }) => {
 			const newStar: Star = {
 				...star,
 				id: `star-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -73,6 +73,11 @@ export const shouldShowStars = derived(visualStore, ($visual) =>
 // Derived store for checking if we should show constellation lines
 export const shouldShowConstellation = derived(visualStore, ($visual) =>
 	['constellation', 'revelation', 'invitation'].includes($visual.state)
+);
+
+// Derived store for allowing star click interactions (includes 'stars' state)
+export const shouldAllowStarInteraction = derived(visualStore, ($visual) =>
+	['stars', 'constellation', 'revelation', 'invitation'].includes($visual.state)
 );
 
 // Derived store for revelation state

@@ -6,10 +6,11 @@
 		VoidMessage,
 		Revelation,
 		InvitationForm,
-		CosmicInput
+		CosmicInput,
+		FragmentDetail
 	} from '$lib/components';
 	import { conversationStore, visualStore } from '$lib/stores';
-	import type { VisualState, Fragment, Message } from '$lib/types/agent';
+	import type { VisualState, Fragment, Message, Star } from '$lib/types/agent';
 
 	// Session ID for this conversation
 	let sessionId = $state('');
@@ -17,6 +18,9 @@
 	// UI state
 	let showRevelation = $state(false);
 	let showInvitation = $state(false);
+
+	// Selected fragment for modal display
+	let selectedFragment = $state<Fragment | null>(null);
 
 	// Void dialogue state
 	type VoidPhase = 'greeting' | 'waiting-input' | 'loading' | 'assistant-speaking';
@@ -201,8 +205,12 @@
 			size: 3 + Math.random() * 2,
 			brightness: 0.8 + Math.random() * 0.2,
 			fragmentId: fragment.id,
+			fragment: fragment,  // Store fragment data directly
 			twinkleSpeed: 2 + Math.random() * 2
 		});
+
+		// Auto-display the fragment detail modal
+		selectedFragment = fragment;
 
 		const currentState = currentVisualState.state;
 		if (currentState === 'dialogue') {
@@ -235,6 +243,16 @@
 		conversationStore.setPhase('completed');
 	}
 
+	// Handle star click to show fragment detail
+	function handleStarClick(fragment: Fragment, star: Star) {
+		selectedFragment = fragment;
+	}
+
+	// Close fragment detail modal
+	function handleCloseFragmentDetail() {
+		selectedFragment = null;
+	}
+
 	// Get latest assistant message for display
 	let latestAssistant = $derived([...allMessages].reverse().find(m => m.role === 'assistant'));
 </script>
@@ -247,7 +265,7 @@
 <div class="app-container">
 	<!-- Background layers -->
 	<StarBackground />
-	<Constellation />
+	<Constellation onstarclick={handleStarClick} />
 
 	<!-- Main content -->
 	<div class="content-layer">
@@ -263,7 +281,6 @@
 						<VoidMessage
 							key={messageKey}
 							message={latestAssistant}
-							showFragment={currentVisualState.state !== 'dialogue'}
 							oncomplete={handleMessageComplete}
 						/>
 					{/if}
@@ -295,6 +312,14 @@
 			{/if}
 		{/if}
 	</div>
+
+	<!-- Fragment detail modal -->
+	{#if selectedFragment}
+		<FragmentDetail
+			fragment={selectedFragment}
+			onclose={handleCloseFragmentDetail}
+		/>
+	{/if}
 </div>
 
 <style>

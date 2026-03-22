@@ -24,6 +24,7 @@ export interface Star {
 	size: number;
 	brightness: number;
 	fragmentId?: string;
+	fragment?: Fragment;  // Store fragment data directly with star
 	twinkleSpeed: number;
 	createdAt: number;
 }

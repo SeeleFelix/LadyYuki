@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-	import { visualStore, shouldShowConstellation } from '$lib/stores';
+	import { visualStore, shouldShowConstellation, shouldAllowStarInteraction } from '$lib/stores';
 	import type { Star, ConstellationLine, Fragment } from '$lib/types/agent';
+
+	interface Props {
+		onstarclick?: (fragment: Fragment, star: Star) => void;
+	}
+
+	let { onstarclick }: Props = $props();
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D | null = null;
@@ -23,14 +29,20 @@
 	// Reactive subscriptions
 	let currentVisualState = $state($visualStore);
 	let showConstellation = $state($shouldShowConstellation);
+	let allowInteraction = $state($shouldAllowStarInteraction);
+
+	// Track selected/highlighted star
+	let selectedStarId = $state<string | null>(null);
 
 	// Subscribe to stores
 	$effect(() => {
 		const unsub1 = visualStore.subscribe((v) => (currentVisualState = v));
 		const unsub2 = shouldShowConstellation.subscribe((v) => (showConstellation = v));
+		const unsub3 = shouldAllowStarInteraction.subscribe((v) => (allowInteraction = v));
 		return () => {
 			unsub1();
 			unsub2();
+			unsub3();
 		};
 	});
 
@@ -40,6 +52,7 @@
 
 		resizeCanvas();
 		window.addEventListener('resize', resizeCanvas);
+		window.addEventListener('click', handleCanvasClick);
 
 		// Initialize energy particles
 		initEnergyParticles();
@@ -50,6 +63,7 @@
 	onDestroy(() => {
 		if (!browser) return;
 		window.removeEventListener('resize', resizeCanvas);
+		window.removeEventListener('click', handleCanvasClick);
 		if (animationFrameId) {
 			cancelAnimationFrame(animationFrameId);
 		}
@@ -58,6 +72,32 @@
 	function resizeCanvas() {
 		canvas.width = window.innerWidth;
 		canvas.height = window.innerHeight;
+	}
+
+	function handleCanvasClick(e: MouseEvent) {
+		if (!allowInteraction) return;
+
+		const rect = canvas.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		// Check if click is on any star
+		const stars = currentVisualState.stars;
+		for (const star of stars) {
+			const distance = Math.sqrt(Math.pow(x - star.x, 2) + Math.pow(y - star.y, 2));
+			const hitRadius = Math.max(star.size * 6, 20); // Make hit area larger than visual star
+
+			if (distance <= hitRadius && star.fragment) {
+				selectedStarId = star.id;
+				onstarclick?.(star.fragment, star);
+				break;
+			}
+		}
+	}
+
+	// Export function to clear selection
+	export function clearSelection() {
+		selectedStarId = null;
 	}
 
 	function initEnergyParticles() {
@@ -228,15 +268,40 @@
 			breathScale = 1 + Math.sin(time * 1.5 + star.id.charCodeAt(3)) * 0.1;
 		}
 
-		// Outer ring pulse
-		const ringOpacity = 0.2 + Math.sin(time * 2 + star.id.charCodeAt(5)) * 0.1;
+		// Check if this star is selected
+		const isSelected = star.id === selectedStarId;
+		const hasFragment = !!star.fragment;
+
+		// Outer ring pulse - more prominent for stars with fragments
+		const baseOpacity = hasFragment ? 0.35 : 0.2;
+		const ringOpacity = baseOpacity + Math.sin(time * 2 + star.id.charCodeAt(5)) * 0.1;
 		const ringSize = (star.size * 4 + Math.sin(time * 1.5) * 2) * breathScale;
 
+		// Selected star gets a cyan glow
+		const ringColor = isSelected ? 'rgba(34, 211, 238, 0.8)' :
+		                  hasFragment ? 'rgba(139, 92, 246, 0.5)' :
+		                  `rgba(139, 92, 246, ${ringOpacity})`;
+
 		ctx!.beginPath();
-		ctx!.arc(star.x, star.y, ringSize, 0, Math.PI * 2);
-		ctx!.strokeStyle = `rgba(139, 92, 246, ${ringOpacity})`;
-		ctx!.lineWidth = 1;
+		ctx!.arc(star.x, star.y, ringSize * (isSelected ? 1.3 : 1), 0, Math.PI * 2);
+		ctx!.strokeStyle = ringColor;
+		ctx!.lineWidth = isSelected ? 2 : 1;
 		ctx!.stroke();
+
+		// Selected star gets an additional glow
+		if (isSelected) {
+			const glowGradient = ctx!.createRadialGradient(
+				star.x, star.y, 0,
+				star.x, star.y, ringSize * 2
+			);
+			glowGradient.addColorStop(0, 'rgba(34, 211, 238, 0.3)');
+			glowGradient.addColorStop(0.5, 'rgba(34, 211, 238, 0.1)');
+			glowGradient.addColorStop(1, 'rgba(34, 211, 238, 0)');
+			ctx!.beginPath();
+			ctx!.arc(star.x, star.y, ringSize * 2, 0, Math.PI * 2);
+			ctx!.fillStyle = glowGradient;
+			ctx!.fill();
+		}
 
 		// Connection nodes effect - small dots around the star
 		const nodeCount = 4;
@@ -245,20 +310,35 @@
 			const distance = star.size * 6 + Math.sin(time * 2 + i) * 3;
 			const nodeX = star.x + Math.cos(angle) * distance;
 			const nodeY = star.y + Math.sin(angle) * distance;
-			const nodeOpacity = 0.3 + Math.sin(time * 3 + i * 0.5) * 0.2;
+			const nodeOpacity = hasFragment ? 0.4 : 0.3;
 
 			ctx!.beginPath();
-			ctx!.arc(nodeX, nodeY, 1.5, 0, Math.PI * 2);
-			ctx!.fillStyle = `rgba(139, 92, 246, ${nodeOpacity})`;
+			ctx!.arc(nodeX, nodeY, isSelected ? 2 : 1.5, 0, Math.PI * 2);
+			ctx!.fillStyle = isSelected ? 'rgba(34, 211, 238, 0.8)' :
+			                 hasFragment ? 'rgba(139, 92, 246, 0.5)' :
+			                 `rgba(139, 92, 246, ${nodeOpacity})`;
 			ctx!.fill();
 		}
 	}
 </script>
 
-<canvas bind:this={canvas} class="fixed inset-0 w-full h-full pointer-events-none" />
+<canvas
+	bind:this={canvas}
+	class="fixed inset-0 w-full h-full constellation-canvas"
+	class:pointer-events-none={!allowInteraction}
+/>
 
 <style>
-	canvas {
+	.constellation-canvas {
 		z-index: 1;
+		cursor: default;
+	}
+
+	.constellation-canvas.pointer-events-none {
+		pointer-events: none;
+	}
+
+	.constellation-canvas:not(.pointer-events-none) {
+		cursor: pointer;
 	}
 </style>

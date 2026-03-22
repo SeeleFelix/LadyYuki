@@ -1,2 +1,2 @@
 export { conversationStore } from './conversation';
-export { visualStore, shouldShowStars, shouldShowConstellation, isRevelation, isInvitation } from './visualState';
+export { visualStore, shouldShowStars, shouldShowConstellation, shouldAllowStarInteraction, isRevelation, isInvitation } from './visualState';
