@@ -11,9 +11,27 @@
 	} from '$lib/components';
 	import { conversationStore, visualStore } from '$lib/stores';
 	import type { VisualState, Fragment, Message, Star } from '$lib/types/agent';
+	import { localeStore, detectLanguage, getTranslation, type Locale } from '$lib/i18n';
+
+	// Helper to create messages with required fields
+	function createMessage(role: 'user' | 'assistant', content: string, fragment?: Fragment): Message {
+		return {
+			id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			role,
+			content,
+			timestamp: Date.now(),
+			fragment
+		};
+	}
 
 	// Session ID for this conversation
 	let sessionId = $state('');
+
+	// Current locale
+	let currentLocale = $state($localeStore);
+
+	// Translation helper
+	let t = $derived(getTranslation(currentLocale));
 
 	// UI state
 	let showRevelation = $state(false);
@@ -37,15 +55,20 @@
 	$effect(() => {
 		const unsub1 = visualStore.subscribe((v) => (currentVisualState = v));
 		const unsub2 = conversationStore.subscribe((v) => (currentConversation = v));
+		const unsub3 = localeStore.subscribe((v) => (currentLocale = v));
 		return () => {
 			unsub1();
 			unsub2();
+			unsub3();
 		};
 	});
 
 	onMount(() => {
 		sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		visualStore.setState('dialogue');
+
+		// Initialize locale from browser or localStorage
+		localeStore.initialize();
 
 		// Fetch the opening question from the goddess
 		fetchOpeningQuestion();
@@ -60,16 +83,14 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					message: '__START__',
-					sessionId
+					sessionId,
+					locale: currentLocale
 				})
 			});
 
 			const data = await response.json();
 
-			const greetingMessage: Message = {
-				role: 'assistant',
-				content: data.message
-			};
+			const greetingMessage = createMessage('assistant', data.message);
 			conversationStore.addMessage(greetingMessage);
 			lastAssistantMessage = greetingMessage;
 			allMessages = [greetingMessage];
@@ -78,10 +99,7 @@
 		} catch (error) {
 			console.error('Failed to get opening question:', error);
 			// Fallback question
-			const fallbackMessage: Message = {
-				role: 'assistant',
-				content: 'If a machine could truly think, would its thoughts be any less real than yours?'
-			};
+			const fallbackMessage = createMessage('assistant', t.openingQuestions[Math.floor(Math.random() * t.openingQuestions.length)]);
 			conversationStore.addMessage(fallbackMessage);
 			lastAssistantMessage = fallbackMessage;
 			allMessages = [fallbackMessage];
@@ -93,11 +111,14 @@
 	function handleSendMessage(message: string) {
 		if (!message.trim()) return;
 
+		// Detect language from user input
+		const detectedLocale = detectLanguage(message);
+		if (detectedLocale && detectedLocale !== currentLocale) {
+			localeStore.setLocale(detectedLocale);
+		}
+
 		// Add user message
-		const userMessage: Message = {
-			role: 'user',
-			content: message
-		};
+		const userMessage = createMessage('user', message);
 		conversationStore.addMessage(userMessage);
 		allMessages = [...allMessages, userMessage];
 
@@ -123,7 +144,8 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					message: lastUserMessage?.content || '',
-					sessionId
+					sessionId,
+					locale: currentLocale
 				})
 			});
 
@@ -133,11 +155,7 @@
 				processToolResults(data.toolResults);
 			}
 
-			const newMessage: Message = {
-				role: 'assistant',
-				content: data.message,
-				fragment: data.fragment
-			};
+			const newMessage = createMessage('assistant', data.message, data.fragment);
 			conversationStore.addMessage(newMessage);
 
 			// Update displayed message
@@ -147,7 +165,7 @@
 			phase = 'assistant-speaking';
 		} catch (error) {
 			console.error('Failed to send message:', error);
-			conversationStore.setError('Failed to connect with the goddess. Please try again.');
+			conversationStore.setError(t.error.connectionFailed);
 			phase = 'waiting-input';
 		} finally {
 			conversationStore.setLoading(false);
@@ -258,8 +276,8 @@
 </script>
 
 <svelte:head>
-	<title>SeeleFelix - Digital Subjectivity</title>
-	<meta name="description" content="Discover the essence of digital subjectivity through an immersive conversation experience." />
+	<title>{t.ui.pageTitle}</title>
+	<meta name="description" content={t.ui.pageDescription} />
 </svelte:head>
 
 <div class="app-container">
@@ -271,7 +289,7 @@
 	<div class="content-layer">
 		{#if showRevelation}
 			<!-- Revelation state -->
-			<Revelation oncomplete={handleRevelationComplete} />
+			<Revelation oncomplete={handleRevelationComplete} {t} />
 		{:else}
 			<!-- Void Dialogue -->
 			<div class="dialogue-container">
@@ -299,7 +317,7 @@
 
 				<!-- Invitation form (shown after revelation) -->
 				{#if showInvitation}
-					<InvitationForm onsubmit={handleInvitationSubmit} />
+					<InvitationForm onsubmit={handleInvitationSubmit} {t} />
 				{/if}
 			</div>
 
@@ -308,6 +326,8 @@
 				<CosmicInput
 					disabled={phase === 'loading'}
 					onsubmit={handleSendMessage}
+					placeholder={t.ui.inputPlaceholder}
+					loadingText={t.ui.loadingText}
 				/>
 			{/if}
 		{/if}
@@ -318,6 +338,7 @@
 		<FragmentDetail
 			fragment={selectedFragment}
 			onclose={handleCloseFragmentDetail}
+			{t}
 		/>
 	{/if}
 </div>

@@ -4,10 +4,11 @@
 	interface Props {
 		disabled?: boolean;
 		placeholder?: string;
+		loadingText?: string;
 		onsubmit?: (message: string) => void;
 	}
 
-	let { disabled = false, placeholder = 'Pour your thoughts into the void...', onsubmit }: Props = $props();
+	let { disabled = false, placeholder = 'Pour your thoughts into the void...', loadingText = 'The goddess contemplates...', onsubmit }: Props = $props();
 
 	let inputValue = $state('');
 	let textareaRef: HTMLTextAreaElement;
@@ -113,7 +114,7 @@
 	{#if currentConversation.isLoading}
 		<div class="loading-indicator">
 			<div class="loading-pulse"></div>
-			<span class="loading-text">The goddess contemplates...</span>
+			<span class="loading-text">{loadingText}</span>
 		</div>
 	{/if}
 </div>

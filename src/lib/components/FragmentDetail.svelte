@@ -1,12 +1,14 @@
 <script lang="ts">
 	import type { Fragment } from '$lib/types/agent';
+	import type { Translation } from '$lib/i18n';
 
 	interface Props {
 		fragment: Fragment;
 		onclose: () => void;
+		t: Translation;
 	}
 
-	let { fragment, onclose }: Props = $props();
+	let { fragment, onclose, t }: Props = $props();
 
 	let isVisible = $state(false);
 
@@ -25,6 +27,11 @@
 			handleClose();
 		}
 	}
+
+	// Get translated theme name
+	function getThemeName(theme: Fragment['theme']): string {
+		return t.fragment.themes[theme] || theme;
+	}
 </script>
 
 <svelte:body on:keydown={(e) => e.key === 'Escape' && handleClose()} />
@@ -40,10 +47,10 @@
 		<div class="modal-content">
 			<div class="fragment-header">
 				<span class="fragment-icon">◆</span>
-				<span class="fragment-label">Fragment Revealed</span>
+				<span class="fragment-label">{t.fragment.label}</span>
 			</div>
 
-			<p class="fragment-theme">{fragment.theme}</p>
+			<p class="fragment-theme">{getThemeName(fragment.theme)}</p>
 
 			<div class="fragment-divider"></div>
 

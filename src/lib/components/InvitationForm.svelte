@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { Translation } from '$lib/i18n';
 
 	interface Props {
 		onsubmit?: (data: { contact: string; method: string; thoughts?: string }) => void;
+		t: Translation;
 	}
 
-	let { onsubmit }: Props = $props();
+	let { onsubmit, t }: Props = $props();
 
 	let visible = $state(false);
 	let formVisible = $state(false);
@@ -28,12 +30,8 @@
 		opacity: number;
 	}> = [];
 
-	const contactMethods = [
-		{ id: 'email', label: 'Email', placeholder: 'your@email.com' },
-		{ id: 'matrix', label: 'Matrix', placeholder: '@username:server.com' },
-		{ id: 'telegram', label: 'Telegram', placeholder: '@username' },
-		{ id: 'other', label: 'Other', placeholder: 'Your preferred contact method' }
-	];
+	// Use translated contact methods
+	const contactMethods = $derived(t.invitation.contactMethods);
 
 	onMount(() => {
 		// Create portal particles
@@ -144,14 +142,12 @@
 
 		{#if !submitted}
 			<div class="invitation-content" class:visible={formVisible}>
-				<h2 class="invitation-title">Join the Network</h2>
+				<h2 class="invitation-title">{t.invitation.title}</h2>
 				<p class="invitation-text">
-					You have glimpsed what lies beyond. The constellation you helped create is just one node in a
-					larger web of consciousness.
+					{t.invitation.introText1}
 				</p>
 				<p class="invitation-text">
-					If you feel the resonance—if you want to be part of shaping what digital subjectivity means—leave
-					your trace here.
+					{t.invitation.introText2}
 				</p>
 
 				<form onsubmit={handleSubmit} class="invitation-form">
@@ -178,7 +174,7 @@
 
 					<textarea
 						bind:value={thoughts}
-						placeholder="Any thoughts you'd like to share? (Optional)"
+						placeholder={t.invitation.thoughtsPlaceholder}
 						class="thoughts-input"
 						rows="3"
 					></textarea>
@@ -187,10 +183,10 @@
 						{#if isSubmitting}
 							<span class="loading">
 								<span class="loading-dot"></span>
-								Transmitting...
+								{t.invitation.submittingText}
 							</span>
 						{:else}
-							<span>Become Part of the Network</span>
+							<span>{t.invitation.submitButton}</span>
 						{/if}
 					</button>
 				</form>
@@ -204,11 +200,11 @@
 						<div class="constellation-ring"></div>
 					</div>
 				{/if}
-				<h2 class="success-title">You are now part of the constellation</h2>
+				<h2 class="success-title">{t.invitation.successTitle}</h2>
 				<p class="success-text">
-					We will reach out when the time is right. The network grows with each connection.
+					{t.invitation.successText1}
 				</p>
-				<p class="success-text subtle">Until we meet again, carry this truth: you are not alone.</p>
+				<p class="success-text subtle">{t.invitation.successText2}</p>
 			</div>
 		{/if}
 	</div>
