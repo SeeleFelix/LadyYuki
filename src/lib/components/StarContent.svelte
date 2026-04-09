@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import FormattedText from './FormattedText.svelte';
 	import type { SpaceStar } from '$lib/types/space';
 	import type { Locale } from '$lib/i18n/detector';
@@ -28,7 +28,7 @@
 
 	function handleClose() {
 		visible = false;
-		setTimeout(onclose, 300);
+		setTimeout(onclose, 400);
 	}
 
 	function handleKeyDown(e: KeyboardEvent) {
@@ -37,7 +37,11 @@
 
 	function handleVoidEnter() {
 		visible = false;
-		setTimeout(() => onentervoid?.(), 300);
+		setTimeout(() => onentervoid?.(), 400);
+	}
+
+	function handleAmbientClick() {
+		handleClose();
 	}
 
 	function extractRgb(rgba: string): string {
@@ -78,21 +82,23 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 {#if visible}
-	<!-- Backdrop -->
-	<div class="backdrop" onclick={handleClose} role="presentation"></div>
-
-	<!-- Content panel -->
+	<!-- Ambient darkening layer -->
 	<div
-		class="star-content"
-		style="--star-color: {colorRgb};"
-		transition:fade={{ duration: 200 }}
+		class="ambient"
+		onclick={handleAmbientClick}
+		transition:fade={{ duration: 400 }}
+	></div>
+
+	<!-- Content emerges from star position -->
+	<div
+		class="star-reveal"
+		style="--star-color: {colorRgb}; --origin-x: {screenX}px; --origin-y: {screenY}px;"
+		transition:fly={{
+			y: Math.round((screenY - window.innerHeight / 2) * 0.3),
+			x: Math.round((screenX - window.innerWidth / 2) * 0.3),
+			duration: 400
+		}}
 	>
-		<div class="content-glow"></div>
-
-		<button class="close-btn" onclick={handleClose} aria-label="Close">
-			&times;
-		</button>
-
 		{#if star.contentType === 'void-entry'}
 			<div class="void-content">
 				<h2 class="void-title">Enter the Void</h2>
@@ -120,82 +126,51 @@
 {/if}
 
 <style>
-	.backdrop {
+	.ambient {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
 		z-index: 50;
+		background: radial-gradient(
+			ellipse at var(--origin-x, 50%) var(--origin-y, 50%),
+			rgba(0, 0, 0, 0.6) 0%,
+			rgba(0, 0, 0, 0.3) 40%,
+			rgba(0, 0, 0, 0.1) 100%
+		);
+		cursor: pointer;
 	}
 
-	.star-content {
+	.star-reveal {
 		position: fixed;
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
 		z-index: 51;
-		max-width: 600px;
-		width: 90vw;
+		max-width: 620px;
+		width: 88vw;
 		max-height: 80vh;
 		overflow-y: auto;
-		background: rgba(10, 10, 20, 0.9);
-		border: 1px solid rgba(var(--star-color), 0.3);
-		border-radius: 12px;
-		padding: 2.5rem;
-		backdrop-filter: blur(20px);
-	}
-
-	.content-glow {
-		position: absolute;
-		top: -50%;
-		left: -50%;
-		width: 200%;
-		height: 200%;
-		background: radial-gradient(
-			ellipse at center,
-			rgba(var(--star-color), 0.05) 0%,
-			rgba(0, 0, 0, 0) 70%
-		);
-		pointer-events: none;
-		z-index: -1;
-	}
-
-	.close-btn {
-		position: absolute;
-		top: 1rem;
-		right: 1rem;
-		background: none;
-		border: none;
-		color: rgba(255, 255, 255, 0.4);
-		font-size: 1.5rem;
-		cursor: pointer;
-		padding: 0.25rem 0.5rem;
-		line-height: 1;
-		transition: color 0.2s;
-	}
-
-	.close-btn:hover {
-		color: rgba(255, 255, 255, 0.8);
+		padding: 3rem 2.5rem;
 	}
 
 	.content-header {
-		margin-bottom: 1.5rem;
+		margin-bottom: 2rem;
 	}
 
 	.content-subtitle {
 		display: inline-block;
-		font-size: 0.75rem;
+		font-size: 0.7rem;
 		text-transform: uppercase;
-		letter-spacing: 0.15em;
-		color: rgba(var(--star-color), 0.7);
-		margin-bottom: 0.5rem;
+		letter-spacing: 0.2em;
+		color: rgba(var(--star-color), 0.6);
+		margin-bottom: 0.6rem;
 	}
 
 	.content-title {
-		font-size: 1.5rem;
+		font-size: 1.6rem;
 		font-weight: 300;
 		color: rgba(255, 255, 255, 0.95);
 		margin: 0;
-		text-shadow: 0 0 20px rgba(var(--star-color), 0.3);
+		text-shadow: 0 0 30px rgba(var(--star-color), 0.2);
 	}
 
 	.content-body {
@@ -217,7 +192,7 @@
 	}
 
 	.void-desc {
-		color: rgba(255, 255, 255, 0.6);
+		color: rgba(255, 255, 255, 0.5);
 		font-size: 0.95rem;
 		margin-bottom: 0.75rem;
 	}
@@ -225,9 +200,9 @@
 	.void-btn {
 		margin-top: 2rem;
 		padding: 0.75rem 2.5rem;
-		background: rgba(139, 92, 246, 0.2);
-		border: 1px solid rgba(139, 92, 246, 0.4);
-		color: rgba(255, 255, 255, 0.9);
+		background: rgba(139, 92, 246, 0.15);
+		border: 1px solid rgba(139, 92, 246, 0.3);
+		color: rgba(255, 255, 255, 0.85);
 		border-radius: 8px;
 		font-size: 1rem;
 		cursor: pointer;
@@ -235,19 +210,19 @@
 	}
 
 	.void-btn:hover {
-		background: rgba(139, 92, 246, 0.35);
-		border-color: rgba(139, 92, 246, 0.6);
-		box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+		background: rgba(139, 92, 246, 0.3);
+		border-color: rgba(139, 92, 246, 0.5);
+		box-shadow: 0 0 25px rgba(139, 92, 246, 0.15);
 	}
 
-	.star-content::-webkit-scrollbar {
-		width: 4px;
+	.star-reveal::-webkit-scrollbar {
+		width: 3px;
 	}
-	.star-content::-webkit-scrollbar-track {
+	.star-reveal::-webkit-scrollbar-track {
 		background: transparent;
 	}
-	.star-content::-webkit-scrollbar-thumb {
-		background: rgba(var(--star-color), 0.3);
+	.star-reveal::-webkit-scrollbar-thumb {
+		background: rgba(var(--star-color), 0.2);
 		border-radius: 2px;
 	}
 </style>

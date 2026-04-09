@@ -105,26 +105,25 @@ function addTextWithPlaceholders(
 	text: string,
 	placeholderMap: Map<string, TextSegment>
 ): void {
-	// Check for placeholders
-	let currentText = text;
-	for (const [placeholder, segment] of placeholderMap) {
-		if (currentText.includes(placeholder)) {
-			const parts = currentText.split(placeholder);
-			for (let i = 0; i < parts.length; i++) {
-				if (parts[i]) {
-					segments.push({ type: 'text', content: parts[i] });
-				}
-				if (i < parts.length - 1) {
-					segments.push({ ...segment });
-				}
-			}
-			currentText = '';
-			break;
-		}
+	const keys = [...placeholderMap.keys()];
+	if (keys.length === 0) {
+		segments.push({ type: 'text', content: text });
+		return;
 	}
 
-	if (currentText) {
-		segments.push({ type: 'text', content: currentText });
+	// Build regex matching any placeholder
+	const pattern = new RegExp(
+		'(' + keys.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')',
+		'g'
+	);
+	const parts = text.split(pattern);
+
+	for (const part of parts) {
+		if (placeholderMap.has(part)) {
+			segments.push({ ...placeholderMap.get(part)! });
+		} else if (part) {
+			segments.push({ type: 'text', content: part });
+		}
 	}
 }
 
