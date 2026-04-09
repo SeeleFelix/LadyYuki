@@ -8,11 +8,10 @@
 		onsubmit?: (message: string) => void;
 	}
 
-	let { disabled = false, placeholder = 'Pour your thoughts into the void...', loadingText = 'The goddess contemplates...', onsubmit }: Props = $props();
+	let { disabled = false, placeholder = '向虚空倾诉...', loadingText = '沉思中...', onsubmit }: Props = $props();
 
 	let inputValue = $state('');
 	let textareaRef: HTMLTextAreaElement;
-	let isFocused = $state(false);
 	let isComposing = $state(false);
 
 	// Reactive subscription
@@ -66,9 +65,8 @@
 </script>
 
 <div class="cosmic-input-container" class:disabled>
-	<div class="input-glow" class:active={isFocused || inputValue.length > 0}></div>
 	<form onsubmit={handleSubmit} class="input-form">
-		<div class="input-wrapper" class:focused={isFocused}>
+		<div class="input-wrapper">
 			<textarea
 				bind:this={textareaRef}
 				bind:value={inputValue}
@@ -76,50 +74,31 @@
 				onkeydown={handleKeyDown}
 				oncompositionstart={handleCompositionStart}
 				oncompositionend={handleCompositionEnd}
-				onfocus={() => (isFocused = true)}
-				onblur={() => (isFocused = false)}
 				{placeholder}
 				{disabled}
 				rows="1"
 				class="input-field"
 			></textarea>
 			<button type="submit" disabled={disabled || !inputValue.trim()} class="send-button" aria-label="Send message">
-				<!-- Comet-style send icon -->
-				<svg viewBox="0 0 24 24" class="comet-icon" xmlns="http://www.w3.org/2000/svg">
-					<defs>
-						<linearGradient id="comet-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-							<stop offset="0%" style="stop-color: rgba(139, 92, 246, 0.9)" />
-							<stop offset="100%" style="stop-color: rgba(59, 130, 246, 0.9)" />
-						</linearGradient>
-					</defs>
-					<path
-						d="M12 2L4 20L12 16L20 20L12 2Z"
-						fill="url(#comet-gradient)"
-						stroke="rgba(255, 255, 255, 0.8)"
-						stroke-width="0.5"
-					/>
-					<!-- Comet tail -->
-					<path
-						d="M12 16L12 22"
-						stroke="rgba(139, 92, 246, 0.6)"
-						stroke-width="2"
-						stroke-linecap="round"
-						class="comet-tail"
-					/>
-				</svg>
 			</button>
 		</div>
 	</form>
 
 	{#if currentConversation.isLoading}
 		<div class="loading-indicator">
-			<div class="loading-pulse"></div>
+			<div class="loading-breath"></div>
 			<span class="loading-text">{loadingText}</span>
 		</div>
 	{/if}
 </div>
 
 <style>
+	/*
+	 * Divine Input - The Void's Opening
+	 * Not a "form", but an opening in the void where you pour your thoughts
+	 * No borders, no backgrounds - pure emptiness with a blinking cursor
+	 */
+
 	.cosmic-input-container {
 		position: fixed;
 		bottom: 0;
@@ -135,179 +114,117 @@
 		opacity: 0.5;
 	}
 
-	/* Ambient glow effect behind input */
-	.input-glow {
-		position: absolute;
-		bottom: 0;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 100%;
-		max-width: 700px;
-		height: 100px;
-		background: radial-gradient(ellipse at center bottom, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
-		opacity: 0.5;
-		transition: opacity 0.5s ease;
-		pointer-events: none;
-	}
-
-	.input-glow.active {
-		opacity: 1;
-		background: radial-gradient(ellipse at center bottom, rgba(139, 92, 246, 0.25) 0%, rgba(59, 130, 246, 0.1) 50%, transparent 70%);
-	}
-
 	.input-form {
 		position: relative;
 		max-width: 650px;
 		margin: 0 auto;
 	}
 
+	/* The void opening - no visible container */
 	.input-wrapper {
 		display: flex;
 		align-items: flex-end;
-		gap: 0.75rem;
-		padding: 0.875rem 1rem;
-		background: rgba(10, 10, 20, 0.8);
-		border: 1px solid rgba(139, 92, 246, 0.2);
-		border-radius: 1.25rem;
-		backdrop-filter: blur(20px);
-		transition: all 0.4s ease;
-		animation: borderPulse 4s ease-in-out infinite;
+		gap: 1rem;
+		padding: 0.5rem 0;
+		/* Completely dissolved - no visual presence */
+		background: transparent;
+		border: none;
+		border-radius: 0;
+		box-shadow: none;
+		outline: none;
 	}
 
-	.input-wrapper.focused {
-		border-color: rgba(139, 92, 246, 0.5);
-		background: rgba(15, 15, 30, 0.9);
-		box-shadow:
-			0 0 30px rgba(139, 92, 246, 0.2),
-			0 0 60px rgba(59, 130, 246, 0.1),
-			inset 0 1px 0 rgba(255, 255, 255, 0.05);
-	}
-
-	@keyframes borderPulse {
-		0%, 100% {
-			border-color: rgba(139, 92, 246, 0.2);
-			box-shadow: 0 0 20px rgba(139, 92, 246, 0.05);
-		}
-		50% {
-			border-color: rgba(139, 92, 246, 0.35);
-			box-shadow: 0 0 30px rgba(139, 92, 246, 0.1);
-		}
-	}
-
+	/* Text emerges from the void */
 	.input-field {
 		flex: 1;
 		background: transparent;
 		border: none;
-		color: rgba(255, 255, 255, 0.9);
+		color: rgba(255, 255, 255, 0.85);
 		font-size: 1rem;
-		line-height: 1.5;
+		line-height: 1.6;
 		resize: none;
 		outline: none;
 		min-height: 24px;
 		max-height: 120px;
 		font-family: inherit;
+		/* Subtle purple cursor - a guiding light in the void */
+		caret-color: rgba(139, 92, 246, 0.6);
 	}
 
 	.input-field::placeholder {
-		color: rgba(255, 255, 255, 0.35);
+		color: rgba(255, 255, 255, 0.2);
 		font-style: italic;
 	}
 
+	/* The send button - a tiny light point, a prayer gesture */
 	.send-button {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 40px;
-		height: 40px;
-		background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
-		border: 1px solid rgba(139, 92, 246, 0.3);
+		width: 8px;
+		height: 8px;
+		background: rgba(139, 92, 246, 0.4);
 		border-radius: 50%;
+		border: none;
 		cursor: pointer;
-		transition: all 0.3s ease;
 		flex-shrink: 0;
+		margin-bottom: 8px;
+		/* Gentle breathing glow on hover */
+		transition: all 0.8s ease-in-out;
+		box-shadow: 0 0 6px rgba(139, 92, 246, 0.3);
 	}
 
 	.send-button:hover:not(:disabled) {
-		background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(59, 130, 246, 0.4));
-		border-color: rgba(139, 92, 246, 0.6);
-		transform: scale(1.05);
-		box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-	}
-
-	.send-button:active:not(:disabled) {
-		transform: scale(0.95);
+		background: rgba(139, 92, 246, 0.6);
+		box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
 	}
 
 	.send-button:disabled {
-		opacity: 0.3;
+		opacity: 0.15;
 		cursor: not-allowed;
+		box-shadow: none;
 	}
 
-	.comet-icon {
-		width: 18px;
-		height: 18px;
-		transform: rotate(-45deg);
-		transition: transform 0.3s ease;
-	}
-
-	.send-button:hover:not(:disabled) .comet-icon {
-		transform: rotate(-45deg) translateY(-2px);
-	}
-
-	.comet-tail {
-		animation: tailGlow 1.5s ease-in-out infinite;
-	}
-
-	@keyframes tailGlow {
-		0%, 100% {
-			opacity: 0.4;
-		}
-		50% {
-			opacity: 0.8;
-		}
-	}
-
+	/* Loading - organic breathing, not pulsing */
 	.loading-indicator {
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.75rem;
-		margin-top: 0.75rem;
+		margin-top: 0.5rem;
 	}
 
-	.loading-pulse {
-		width: 8px;
-		height: 8px;
-		background: rgba(139, 92, 246, 0.8);
+	.loading-breath {
+		width: 6px;
+		height: 6px;
+		background: rgba(139, 92, 246, 0.5);
 		border-radius: 50%;
-		animation: pulse 1.5s ease-in-out infinite;
-		box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+		/* Slow, organic breathing - not technical pulsing */
+		animation: breathe 4s ease-in-out infinite;
 	}
 
-	@keyframes pulse {
+	@keyframes breathe {
 		0%, 100% {
+			opacity: 0.4;
 			transform: scale(1);
-			opacity: 0.8;
 		}
 		50% {
-			transform: scale(1.3);
-			opacity: 1;
+			opacity: 0.7;
+			transform: scale(1.1);
 		}
 	}
 
 	.loading-text {
-		font-size: 0.875rem;
-		color: rgba(255, 255, 255, 0.5);
+		font-size: 0.8rem;
+		color: rgba(255, 255, 255, 0.35);
 		font-style: italic;
-		animation: textFade 2s ease-in-out infinite;
+		/* Gentle fade, like a whisper */
+		animation: whisperFade 5s ease-in-out infinite;
 	}
 
-	@keyframes textFade {
+	@keyframes whisperFade {
 		0%, 100% {
-			opacity: 0.5;
+			opacity: 0.35;
 		}
 		50% {
-			opacity: 0.7;
+			opacity: 0.5;
 		}
 	}
 
@@ -318,22 +235,12 @@
 		}
 
 		.input-wrapper {
-			padding: 0.75rem;
-			gap: 0.5rem;
+			padding: 0.5rem 0;
+			gap: 0.75rem;
 		}
 
 		.input-field {
 			font-size: 16px; /* Prevent zoom on iOS */
-		}
-
-		.send-button {
-			width: 36px;
-			height: 36px;
-		}
-
-		.comet-icon {
-			width: 16px;
-			height: 16px;
 		}
 	}
 </style>

@@ -412,7 +412,7 @@
 			invitation: { inner: '255, 220, 150', outer: '200, 150, 100' }
 		};
 
-		const colors = glowColors[state] || glowColors.dialogue;
+		const colors = glowColors[state as keyof typeof glowColors] || glowColors.dialogue;
 
 		// Outer glow
 		const glowGradient = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, size * 10);

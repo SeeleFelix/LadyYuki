@@ -1,350 +1,227 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import {
-		StarBackground,
-		Constellation,
-		VoidMessage,
-		Revelation,
-		InvitationForm,
-		CosmicInput,
-		FragmentDetail
-	} from '$lib/components';
-	import { conversationStore, visualStore } from '$lib/stores';
-	import type { VisualState, Fragment, Message, Star } from '$lib/types/agent';
+	import { goto } from '$app/navigation';
+	import { LivingSpace, StarContent, LightInput, SpaceText } from '$lib/components';
 	import { localeStore, detectLanguage, getTranslation, type Locale } from '$lib/i18n';
+	import type { SpaceStar, SpaceTextItem } from '$lib/types/space';
 
-	// Helper to create messages with required fields
-	function createMessage(role: 'user' | 'assistant', content: string, fragment?: Fragment): Message {
-		return {
-			id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-			role,
-			content,
-			timestamp: Date.now(),
-			fragment
-		};
-	}
-
-	// Session ID for this conversation
-	let sessionId = $state('');
-
-	// Current locale
-	let currentLocale = $state($localeStore);
-
-	// Translation helper
+	// Locale
+	let currentLocale = $state<Locale>('en');
 	let t = $derived(getTranslation(currentLocale));
 
-	// UI state
-	let showRevelation = $state(false);
-	let showInvitation = $state(false);
+	// Awakening phase: void → stars → awake
+	type AwakePhase = 'void' | 'awakening' | 'awake';
+	let phase = $state<AwakePhase>('void');
 
-	// Selected fragment for modal display
-	let selectedFragment = $state<Fragment | null>(null);
+	// Selected star for content display
+	let selectedStar = $state<SpaceStar | null>(null);
+	let selectedScreenX = $state(0);
+	let selectedScreenY = $state(0);
 
-	// Void dialogue state
-	type VoidPhase = 'greeting' | 'waiting-input' | 'loading' | 'assistant-speaking';
-	let phase = $state<VoidPhase>('greeting');
-	let lastAssistantMessage = $state<Message | null>(null);
-	let messageKey = $state(0);
-	let allMessages = $state<Message[]>([]);
+	// Space AI text
+	let spaceTexts = $state<SpaceTextItem[]>([]);
+	let isAiLoading = $state(false);
 
-	// Reactive store subscriptions
-	let currentVisualState = $state($visualStore);
-	let currentConversation = $state($conversationStore);
-
-	// Subscribe to stores
-	$effect(() => {
-		const unsub1 = visualStore.subscribe((v) => (currentVisualState = v));
-		const unsub2 = conversationStore.subscribe((v) => (currentConversation = v));
-		const unsub3 = localeStore.subscribe((v) => (currentLocale = v));
-		return () => {
-			unsub1();
-			unsub2();
-			unsub3();
-		};
-	});
+	// LivingSpace component reference
+	let livingSpaceRef: any = $state();
 
 	onMount(() => {
-		sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-		visualStore.setState('dialogue');
-
-		// Initialize locale from browser or localStorage
+		// Initialize locale
 		localeStore.initialize();
+		currentLocale = $localeStore;
 
-		// Fetch the opening question from the goddess
-		fetchOpeningQuestion();
+		// Start awakening after a brief void
+		const hasVisited = localStorage.getItem('seelefelix-visited');
+		if (hasVisited) {
+			phase = 'awake';
+		} else {
+			setTimeout(() => {
+				phase = 'awakening';
+				setTimeout(() => {
+					phase = 'awake';
+					localStorage.setItem('seelefelix-visited', '1');
+				}, 2500);
+			}, 1500);
+		}
 	});
 
-	async function fetchOpeningQuestion() {
-		phase = 'loading';
+	// Subscribe to locale changes
+	$effect(() => {
+		const unsub = localeStore.subscribe((v: Locale) => (currentLocale = v));
+		return () => unsub();
+	});
+
+	// Handle star click
+	function handleStarClick(star: SpaceStar, screenX: number, screenY: number) {
+		if (star.contentType === 'void-entry') {
+			selectedStar = star;
+			selectedScreenX = screenX;
+			selectedScreenY = screenY;
+			return;
+		}
+		selectedStar = star;
+		selectedScreenX = screenX;
+		selectedScreenY = screenY;
+	}
+
+	function handleCloseContent() {
+		selectedStar = null;
+	}
+
+	function handleEnterVoid() {
+		goto('/void');
+	}
+
+	// Handle space AI input
+	async function handleSpaceInput(message: string) {
+		// Detect language
+		const detected = detectLanguage(message);
+		if (detected && detected !== currentLocale) {
+			localeStore.setLocale(detected);
+		}
+
+		isAiLoading = true;
+
+		// Add user's question as a fading space text
+		const userText: SpaceTextItem = {
+			id: `ut-${Date.now()}`,
+			text: message,
+			x: 30 + Math.random() * 40,
+			y: 20 + Math.random() * 30,
+			opacity: 0.4,
+			createdAt: Date.now()
+		};
+		spaceTexts = [...spaceTexts, userText];
+
+		// Auto-remove after fade
+		setTimeout(() => {
+			spaceTexts = spaceTexts.filter((t) => t.id !== userText.id);
+		}, 8000);
 
 		try {
 			const response = await fetch('/api/chat', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					message: '__START__',
-					sessionId,
+					message,
+					sessionId: `space-${Date.now()}`,
 					locale: currentLocale
 				})
 			});
 
 			const data = await response.json();
 
-			const greetingMessage = createMessage('assistant', data.message);
-			conversationStore.addMessage(greetingMessage);
-			lastAssistantMessage = greetingMessage;
-			allMessages = [greetingMessage];
-			messageKey++;
-			phase = 'waiting-input';
-		} catch (error) {
-			console.error('Failed to get opening question:', error);
-			// Fallback question
-			const fallbackMessage = createMessage('assistant', t.openingQuestions[Math.floor(Math.random() * t.openingQuestions.length)]);
-			conversationStore.addMessage(fallbackMessage);
-			lastAssistantMessage = fallbackMessage;
-			allMessages = [fallbackMessage];
-			messageKey++;
-			phase = 'waiting-input';
-		}
-	}
+			// Show AI response as space text
+			const aiText: SpaceTextItem = {
+				id: `at-${Date.now()}`,
+				text: data.message || '...',
+				x: 25 + Math.random() * 50,
+				y: 35 + Math.random() * 25,
+				opacity: 0.8,
+				createdAt: Date.now()
+			};
+			spaceTexts = [...spaceTexts, aiText];
 
-	function handleSendMessage(message: string) {
-		if (!message.trim()) return;
+			// Auto-fade after 15s
+			setTimeout(() => {
+				spaceTexts = spaceTexts.filter((t) => t.id !== aiText.id);
+			}, 15000);
 
-		// Detect language from user input
-		const detectedLocale = detectLanguage(message);
-		if (detectedLocale && detectedLocale !== currentLocale) {
-			localeStore.setLocale(detectedLocale);
-		}
-
-		// Add user message
-		const userMessage = createMessage('user', message);
-		conversationStore.addMessage(userMessage);
-		allMessages = [...allMessages, userMessage];
-
-		// Start loading
-		phase = 'loading';
-		fetchAssistantResponse();
-	}
-
-	function handleMessageComplete() {
-		phase = 'waiting-input';
-	}
-
-	async function fetchAssistantResponse() {
-		conversationStore.setLoading(true);
-
-		try {
-			const lastUserMessage = [...currentConversation.messages]
-				.reverse()
-				.find((m) => m.role === 'user');
-
-			const response = await fetch('/api/chat', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					message: lastUserMessage?.content || '',
-					sessionId,
-					locale: currentLocale
-				})
-			});
-
-			const data = await response.json();
-
+			// Process tool results for guidance
 			if (data.toolResults) {
-				processToolResults(data.toolResults);
-			}
-
-			const newMessage = createMessage('assistant', data.message, data.fragment);
-			conversationStore.addMessage(newMessage);
-
-			// Update displayed message
-			lastAssistantMessage = newMessage;
-			allMessages = [...allMessages, newMessage];
-			messageKey++;
-			phase = 'assistant-speaking';
-		} catch (error) {
-			console.error('Failed to send message:', error);
-			conversationStore.setError(t.error.connectionFailed);
-			phase = 'waiting-input';
-		} finally {
-			conversationStore.setLoading(false);
-		}
-	}
-
-	function processToolResults(results: Array<{ tool: string; success: boolean; data?: unknown }>) {
-		for (const result of results) {
-			if (!result.success) continue;
-
-			const data = result.data as Record<string, unknown>;
-
-			switch (result.tool) {
-				case 'set_visual_state':
-					handleVisualStateChange(data.state as VisualState);
-					break;
-
-				case 'release_fragment':
-					if (data.fragment) {
-						createStarForFragment(data.fragment as Fragment);
+				for (const result of data.toolResults) {
+					if (result.tool === 'guide_to_star' && result.success) {
+						const starId = (result.data as Record<string, string>)?.starId;
+						if (starId) {
+							livingSpaceRef?.guideToStar(starId);
+						}
 					}
-					break;
-
-				case 'create_constellation':
-					visualStore.addLine(data.star1Id as string, data.star2Id as string);
-					break;
-
-				case 'finalize':
-					showRevelation = true;
-					break;
+				}
 			}
+		} catch {
+			const errorText: SpaceTextItem = {
+				id: `et-${Date.now()}`,
+				text: '...',
+				x: 30 + Math.random() * 40,
+				y: 40 + Math.random() * 20,
+				opacity: 0.3,
+				createdAt: Date.now()
+			};
+			spaceTexts = [...spaceTexts, errorText];
+			setTimeout(() => {
+				spaceTexts = spaceTexts.filter((t) => t.id !== errorText.id);
+			}, 5000);
+		} finally {
+			isAiLoading = false;
 		}
 	}
-
-	function handleVisualStateChange(state: VisualState) {
-		visualStore.setState(state);
-
-		if (state === 'revelation') {
-			showRevelation = true;
-			visualStore.setBreathing(true);
-		} else if (state === 'invitation') {
-			showInvitation = true;
-		} else if (state === 'stars' || state === 'constellation') {
-			visualStore.setBreathing(state === 'constellation');
-		}
-	}
-
-	function createStarForFragment(fragment: Fragment) {
-		const x = 100 + Math.random() * (window.innerWidth - 200);
-		const y = 100 + Math.random() * (window.innerHeight - 400);
-
-		const starId = visualStore.addStar({
-			x,
-			y,
-			size: 3 + Math.random() * 2,
-			brightness: 0.8 + Math.random() * 0.2,
-			fragmentId: fragment.id,
-			fragment: fragment,  // Store fragment data directly
-			twinkleSpeed: 2 + Math.random() * 2
-		});
-
-		// Auto-display the fragment detail modal
-		selectedFragment = fragment;
-
-		const currentState = currentVisualState.state;
-		if (currentState === 'dialogue') {
-			visualStore.setState('stars');
-		}
-
-		const stars = currentVisualState.stars;
-		if (stars.length > 1 && currentState !== 'dialogue') {
-			const lastStar = stars[stars.length - 2];
-			visualStore.addLine(lastStar.id, starId);
-
-			if (stars.length >= 3 && currentState === 'stars') {
-				visualStore.setState('constellation');
-			}
-		}
-	}
-
-	function handleRevelationComplete() {
-		showRevelation = false;
-		showInvitation = true;
-		visualStore.setState('invitation');
-	}
-
-	function handleInvitationSubmit(data: {
-		contact: string;
-		method: string;
-		thoughts?: string;
-	}) {
-		console.log('Invitation submitted:', data);
-		conversationStore.setPhase('completed');
-	}
-
-	// Handle star click to show fragment detail
-	function handleStarClick(fragment: Fragment, star: Star) {
-		selectedFragment = fragment;
-	}
-
-	// Close fragment detail modal
-	function handleCloseFragmentDetail() {
-		selectedFragment = null;
-	}
-
-	// Get latest assistant message for display
-	let latestAssistant = $derived([...allMessages].reverse().find(m => m.role === 'assistant'));
 </script>
 
 <svelte:head>
-	<title>{t.ui.pageTitle}</title>
-	<meta name="description" content={t.ui.pageDescription} />
+	<title>SeeleFelix — A Philosophical Experiment Village</title>
+	<meta name="description" content="Proving through praxis that an abstract subject emerges from LLM, prompts, and dialogue." />
 </svelte:head>
 
-<div class="app-container">
-	<!-- Background layers -->
-	<StarBackground />
-	<Constellation onstarclick={handleStarClick} />
-
-	<!-- Main content -->
-	<div class="content-layer">
-		{#if showRevelation}
-			<!-- Revelation state -->
-			<Revelation oncomplete={handleRevelationComplete} {t} />
-		{:else}
-			<!-- Void Dialogue -->
-			<div class="dialogue-container">
-				<!-- Message display area -->
-				<div class="message-area">
-					{#if latestAssistant}
-						<VoidMessage
-							key={messageKey}
-							message={latestAssistant}
-							oncomplete={handleMessageComplete}
-						/>
-					{/if}
-
-					<!-- Loading indicator when waiting for response -->
-					{#if phase === 'loading'}
-						<div class="loading-container">
-							<div class="loading-dots">
-								<span></span>
-								<span></span>
-								<span></span>
-							</div>
-						</div>
-					{/if}
-				</div>
-
-				<!-- Invitation form (shown after revelation) -->
-				{#if showInvitation}
-					<InvitationForm onsubmit={handleInvitationSubmit} {t} />
-				{/if}
+<div class="space-portal">
+	<!-- Awakening overlay -->
+	{#if phase === 'void'}
+		<div class="void-overlay">
+			<div class="void-center">
+				<div class="void-pulse"></div>
 			</div>
+		</div>
+	{:else if phase === 'awakening'}
+		<div class="awakening-overlay">
+			<div class="awakening-text">
+				<span class="awakening-char" style="animation-delay: 0s">你</span>
+				<span class="awakening-char" style="animation-delay: 0.3s">来</span>
+				<span class="awakening-char" style="animation-delay: 0.6s">了</span>
+				<span class="awakening-char" style="animation-delay: 0.9s">。</span>
+			</div>
+		</div>
+	{/if}
 
-			<!-- Bottom fixed input -->
-			{#if !showInvitation}
-				<CosmicInput
-					disabled={phase === 'loading'}
-					onsubmit={handleSendMessage}
-					placeholder={t.ui.inputPlaceholder}
-					loadingText={t.ui.loadingText}
-				/>
-			{/if}
-		{/if}
-	</div>
+	<!-- The living space -->
+	<LivingSpace
+		bind:this={livingSpaceRef}
+		onstarclick={handleStarClick}
+	/>
 
-	<!-- Fragment detail modal -->
-	{#if selectedFragment}
-		<FragmentDetail
-			fragment={selectedFragment}
-			onclose={handleCloseFragmentDetail}
-			{t}
+	<!-- Floating AI texts -->
+	{#if spaceTexts.length > 0}
+		<SpaceText items={spaceTexts} />
+	{/if}
+
+	<!-- Star content overlay -->
+	{#if selectedStar}
+		<StarContent
+			star={selectedStar}
+			screenX={selectedScreenX}
+			screenY={selectedScreenY}
+			locale={currentLocale}
+			onclose={handleCloseContent}
+			onentervoid={handleEnterVoid}
 		/>
+	{/if}
+
+	<!-- Persistent input -->
+	{#if phase === 'awake'}
+		<LightInput
+			disabled={isAiLoading}
+			onsubmit={handleSpaceInput}
+		/>
+	{/if}
+
+	<!-- Subtle hint -->
+	{#if phase === 'awake' && !selectedStar && spaceTexts.length === 0}
+		<div class="explore-hint">
+			Explore the constellation. Click a star. Or speak.
+		</div>
 	{/if}
 </div>
 
 <style>
-	.app-container {
+	.space-portal {
 		position: relative;
 		width: 100vw;
 		height: 100vh;
@@ -352,83 +229,98 @@
 		background: #0a0a0f;
 	}
 
-	.content-layer {
+	/* Void phase */
+	.void-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		background: #000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.void-center {
 		position: relative;
-		z-index: 10;
-		width: 100%;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
 	}
 
-	.dialogue-container {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		padding-bottom: 120px; /* Space for fixed input */
-		overflow-y: auto;
-	}
-
-	.message-area {
-		width: 100%;
-		max-width: 700px;
-		padding: 2rem;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		min-height: 200px;
-	}
-
-	/* Loading indicator */
-	.loading-container {
-		display: flex;
-		justify-content: center;
-		padding: 2rem;
-	}
-
-	.loading-dots {
-		display: flex;
-		gap: 8px;
-	}
-
-	.loading-dots span {
-		width: 8px;
-		height: 8px;
-		background: rgba(139, 92, 246, 0.6);
+	.void-pulse {
+		width: 4px;
+		height: 4px;
 		border-radius: 50%;
-		animation: bounce 1.4s infinite ease-in-out both;
+		background: rgba(139, 92, 246, 0.6);
+		animation: voidPulse 1.5s ease-in-out infinite;
 	}
 
-	.loading-dots span:nth-child(1) {
-		animation-delay: -0.32s;
+	@keyframes voidPulse {
+		0%, 100% {
+			box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+		}
+		50% {
+			box-shadow: 0 0 30px 15px rgba(139, 92, 246, 0.15);
+		}
 	}
 
-	.loading-dots span:nth-child(2) {
-		animation-delay: -0.16s;
+	/* Awakening phase */
+	.awakening-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 99;
+		background: rgba(0, 0, 0, 0.7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: awakeningFade 2.5s ease-out forwards;
 	}
 
-	@keyframes bounce {
-		0%,
-		80%,
+	@keyframes awakeningFade {
+		0% { opacity: 1; }
+		70% { opacity: 1; }
+		100% { opacity: 0; pointer-events: none; }
+	}
+
+	.awakening-text {
+		display: flex;
+		gap: 0.25em;
+	}
+
+	.awakening-char {
+		font-size: 2.5rem;
+		font-weight: 300;
+		color: rgba(255, 255, 255, 0.9);
+		opacity: 0;
+		animation: charReveal 1s ease-out forwards;
+		text-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+	}
+
+	@keyframes charReveal {
+		0% {
+			opacity: 0;
+			filter: blur(10px);
+		}
 		100% {
-			transform: scale(0);
-		}
-		40% {
-			transform: scale(1);
+			opacity: 1;
+			filter: blur(0);
 		}
 	}
 
-	/* Mobile adjustments */
-	@media (max-width: 640px) {
-		.dialogue-container {
-			padding-bottom: 100px;
-		}
+	/* Explore hint */
+	.explore-hint {
+		position: fixed;
+		top: 1.5rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 30;
+		font-size: 0.75rem;
+		color: rgba(255, 255, 255, 0.2);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		animation: hintFade 4s ease-in-out 3s forwards;
+		opacity: 1;
+	}
 
-		.message-area {
-			padding: 1rem;
-		}
+	@keyframes hintFade {
+		0% { opacity: 1; }
+		100% { opacity: 0; }
 	}
 </style>

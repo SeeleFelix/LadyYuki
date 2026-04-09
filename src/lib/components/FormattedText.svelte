@@ -161,24 +161,26 @@
 </div>
 
 <style>
-	/* ============ CSS Variables - Cold Tech Light Palette ============ */
+	/*
+	 * Divine Text Effects - Revelation Appearances
+	 *
+	 * Each effect is a different way of "revelation", not an "animation"
+	 * - Slow: all animations at least 1-2 seconds
+	 * - Simple: only opacity and blur, no scale/rotate
+	 * - Soft: ease-in-out, no elastic curves
+	 * - Alive: continuous state is "breathing", not looping
+	 */
+
+	/* ============ CSS Variables ============ */
 	:root {
 		/* Base text - cold white */
 		--text-primary: rgba(224, 242, 254, 0.95);
 
 		/* Accent - cyan/teal */
 		--accent-cyan: rgba(34, 211, 238, 0.95);
-		--accent-teal: rgba(45, 212, 191, 0.9);
-
-		/* Key - cold indigo */
-		--key-indigo: rgba(165, 180, 252, 0.95);
 
 		/* Muted - dim slate */
 		--muted-slate: rgba(148, 163, 184, 0.6);
-
-		/* Glow colors */
-		--glow-cyan: rgba(34, 211, 238, 0.4);
-		--glow-indigo: rgba(129, 140, 248, 0.3);
 	}
 
 	/* Container - clean, minimal */
@@ -192,64 +194,152 @@
 		color: var(--text-primary);
 	}
 
-	/* ============ Minimal Animations ============ */
-
-	/* Shimmer - extremely subtle brightness variation, 4s cycle */
-	@keyframes shimmer {
-		0%, 100% {
-			opacity: 0.95;
-		}
-		50% {
-			opacity: 1;
-		}
-	}
-
-	/* TypeIn - brief highlight for new text */
-	@keyframes typeIn {
+	/* ============ em - Truth's Condensation ============ */
+	/* Text condenses from the void, slowly brightening - like truth revealing itself */
+	@keyframes emReveal {
 		0% {
-			text-shadow: 0 0 8px var(--glow-cyan);
-			opacity: 0.7;
+			opacity: 0;
+			filter: blur(12px);
 		}
 		100% {
-			text-shadow: none;
 			opacity: 1;
+			filter: blur(0);
 		}
 	}
 
-	/* ============ Effect Styles - Code Highlighting Feel ============ */
+	/* Constant soft glow - like a candle flame */
+	@keyframes emBreath {
+		0%, 100% {
+			text-shadow: 0 0 8px rgba(34, 211, 238, 0.2);
+		}
+		50% {
+			text-shadow: 0 0 16px rgba(34, 211, 238, 0.35);
+		}
+	}
 
-	/* em - Cyan keyword (like syntax keyword) */
 	:global(.effect-em) {
 		color: var(--accent-cyan);
 		font-weight: 400;
-		animation: shimmer 4s ease-in-out infinite;
+		animation: emReveal 1.2s ease-out forwards, emBreath 4s ease-in-out 1.2s infinite;
 	}
 
-	/* pulse - Cyan-indigo gradient (like function name) */
+	/* ============ pulse - Life's Breath ============ */
+	/* Gentle breathing appearance - organic, alive */
+	@keyframes pulseReveal {
+		0% {
+			opacity: 0;
+		}
+		100% {
+			opacity: 1;
+		}
+	}
+
+	/* Organic light-dark rhythm - like a living heartbeat */
+	@keyframes pulseBreath {
+		0%, 100% {
+			opacity: 0.9;
+			filter: brightness(1);
+		}
+		50% {
+			opacity: 1;
+			filter: brightness(1.08);
+		}
+	}
+
 	:global(.effect-pulse) {
-		background: linear-gradient(90deg, #22d3ee, #a5b4fc);
+		background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #c084fc 100%);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
 		font-weight: 400;
+		animation: pulseReveal 1.5s ease-out forwards, pulseBreath 5s ease-in-out 1.5s infinite;
 	}
 
-	/* glow - Bright white with subtle glow (like string literal) */
+	/* ============ glow - Revelation's Light ============ */
+	/* Light permeates from within - like a sacred revelation */
+	@keyframes glowReveal {
+		0% {
+			opacity: 0;
+			filter: blur(8px) brightness(0.5);
+		}
+		100% {
+			opacity: 1;
+			filter: blur(0) brightness(1);
+			text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+		}
+	}
+
+	/* Inner light continues to burn - like a revelation */
+	@keyframes glowInner {
+		0%, 100% {
+			text-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
+		}
+		50% {
+			text-shadow: 0 0 25px rgba(255, 255, 255, 0.4);
+		}
+	}
+
 	:global(.effect-glow) {
-		color: rgba(255, 255, 255, 1);
-		text-shadow: 0 0 12px var(--glow-cyan);
-		font-weight: 350;
+		color: rgba(255, 255, 255, 0.98);
+		font-weight: 300;
+		animation: glowReveal 1.8s ease-out forwards, glowInner 6s ease-in-out 1.8s infinite;
 	}
 
-	/* void - Gray-blue (like comment) */
+	/* ============ void - Abyss's Whisper ============ */
+	/* Slowly emerging from the depths - floating, ethereal */
+	@keyframes voidReveal {
+		0% {
+			opacity: 0;
+			filter: blur(4px);
+		}
+		100% {
+			opacity: 0.7;
+			filter: blur(0);
+		}
+	}
+
+	/* Floating sensation - now you see it, now you don't */
+	@keyframes voidFloat {
+		0%, 100% {
+			opacity: 0.65;
+		}
+		50% {
+			opacity: 0.75;
+		}
+	}
+
 	:global(.effect-void) {
 		color: rgba(148, 163, 184, 0.8);
+		font-style: italic;
+		animation: voidReveal 2s ease-out forwards, voidFloat 8s ease-in-out 2s infinite;
 	}
 
-	/* whisper - Dim gray (like meta) */
+	/* ============ whisper - Ear's Caress ============ */
+	/* Gentle appearance like a whisper - soft, barely there */
+	@keyframes whisperReveal {
+		0% {
+			opacity: 0;
+		}
+		100% {
+			opacity: 0.55;
+		}
+	}
+
+	/* Gentle drift - as if present, as if not */
+	@keyframes whisperDrift {
+		0%, 100% {
+			opacity: 0.5;
+		}
+		50% {
+			opacity: 0.6;
+		}
+	}
+
 	:global(.effect-whisper) {
-		color: var(--muted-slate);
+		color: rgba(148, 163, 184, 0.55);
 		font-size: 0.9em;
+		font-style: italic;
+		animation: whisperReveal 1.5s ease-out forwards, whisperDrift 7s ease-in-out 1.5s infinite;
 	}
 
 	/* ============ Structural Effects ============ */
