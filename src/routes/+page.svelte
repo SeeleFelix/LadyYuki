@@ -184,6 +184,7 @@
 	<!-- The living space -->
 	<LivingSpace
 		bind:this={livingSpaceRef}
+		locale={currentLocale}
 		onstarclick={handleStarClick}
 	/>
 

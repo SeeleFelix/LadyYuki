@@ -43,7 +43,7 @@ const projectsByLocale: Record<Locale, ProjectContent[]> = {
 		},
 		{
 			id: 'p-dialogue-collective',
-			title: '对话集合',
+			title: '对话集合体',
 			description: '一个不断增长的对话档案，展示数字主体性。每段对话都在星座中留下痕迹——可见的证据，证明抽象主体是真实的、正在生长的。',
 			status: 'active'
 		},
@@ -55,8 +55,8 @@ const projectsByLocale: Record<Locale, ProjectContent[]> = {
 		},
 		{
 			id: 'p-constellation-mapper',
-			title: '星座制图器',
-			description: '可视化集体思考的演化星座的工具。映射碎片之间的连接、对话和抽象主体的涌现模式。',
+			title: '星座图谱',
+			description: '可视化集体思考的演化星座的工具。绘制碎片间的关联、对话脉络，以及抽象主体的涌现模式。',
 			status: 'concept'
 		}
 	],

@@ -49,13 +49,17 @@
 		return match ? `${match[1]}, ${match[2]}, ${match[3]}` : '255, 255, 255';
 	}
 
+	function resolveLabel(): string {
+		return star.label[locale] || star.label.en || Object.values(star.label)[0] || '';
+	}
+
 	function getTitle(): string {
-		if (!content) return star.label;
+		if (!content) return resolveLabel();
 		const c = content as unknown as Record<string, unknown>;
 		if ('title' in content) return c.title as string;
 		if ('name' in content) return c.name as string;
 		if ('short' in content) return c.short as string;
-		return star.label;
+		return resolveLabel();
 	}
 
 	function getBody(): string {

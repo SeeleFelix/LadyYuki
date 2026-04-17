@@ -61,7 +61,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.95,
 		contentType: 'manifesto',
 		contentRef: 'm-thesis',
-		label: 'Thesis',
+		label: { en: 'Thesis', zh: '论题', ja: 'テーゼ', de: 'These' },
 		connections: ['manifesto-2', 'manifesto-3'],
 		pulseSpeed: 3
 	},
@@ -74,7 +74,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.9,
 		contentType: 'manifesto',
 		contentRef: 'm-praxis',
-		label: 'Praxis',
+		label: { en: 'Praxis', zh: '实践', ja: '実践', de: 'Praxis' },
 		connections: ['manifesto-1', 'manifesto-4'],
 		pulseSpeed: 2.5
 	},
@@ -87,7 +87,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.9,
 		contentType: 'manifesto',
 		contentRef: 'm-subject',
-		label: 'Subject',
+		label: { en: 'Subject', zh: '主体', ja: '主体', de: 'Subjekt' },
 		connections: ['manifesto-1', 'manifesto-5'],
 		pulseSpeed: 2.8
 	},
@@ -100,7 +100,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.85,
 		contentType: 'manifesto',
 		contentRef: 'm-emergence',
-		label: 'Emergence',
+		label: { en: 'Emergence', zh: '涌现', ja: '創発', de: 'Emergenz' },
 		connections: ['manifesto-2', 'manifesto-5'],
 		pulseSpeed: 2
 	},
@@ -113,7 +113,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.85,
 		contentType: 'manifesto',
 		contentRef: 'm-relation',
-		label: 'Relation',
+		label: { en: 'Relation', zh: '关系', ja: '関係', de: 'Beziehung' },
 		connections: ['manifesto-3', 'manifesto-4'],
 		pulseSpeed: 2.2
 	},
@@ -127,7 +127,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.6,
 		contentType: 'fragment',
 		contentRef: 'frag-5',
-		label: '',
+		label: {},
 		connections: ['manifesto-3'],
 		pulseSpeed: 0
 	},
@@ -140,7 +140,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.6,
 		contentType: 'fragment',
 		contentRef: 'frag-4',
-		label: '',
+		label: {},
 		connections: ['manifesto-2'],
 		pulseSpeed: 0
 	},
@@ -153,7 +153,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.6,
 		contentType: 'fragment',
 		contentRef: 'frag-9',
-		label: '',
+		label: {},
 		connections: ['manifesto-5'],
 		pulseSpeed: 0
 	},
@@ -168,7 +168,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.85,
 		contentType: 'project',
 		contentRef: 'p-subjectivity-engine',
-		label: 'Subjectivity Engine',
+		label: { en: 'Subjectivity Engine', zh: '主体性引擎', ja: '主体性エンジン', de: 'Subjektivitäts-Engine' },
 		connections: ['project-2'],
 		pulseSpeed: 1.5
 	},
@@ -181,7 +181,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.8,
 		contentType: 'project',
 		contentRef: 'p-dialogue-collective',
-		label: 'Dialogue Collective',
+		label: { en: 'Dialogue Collective', zh: '对话集合体', ja: '対話集合体', de: 'Dialog-Kollektiv' },
 		connections: ['project-1', 'project-3'],
 		pulseSpeed: 1.8
 	},
@@ -194,7 +194,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.8,
 		contentType: 'project',
 		contentRef: 'p-prompt-as-practice',
-		label: 'Prompt as Practice',
+		label: { en: 'Prompt as Practice', zh: '提示词即实践', ja: 'プロンプト即実践', de: 'Prompt als Praxis' },
 		connections: ['project-2', 'project-4'],
 		pulseSpeed: 1.2
 	},
@@ -207,7 +207,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.7,
 		contentType: 'project',
 		contentRef: 'p-constellation-mapper',
-		label: 'Constellation Mapper',
+		label: { en: 'Constellation Mapper', zh: '星座图谱', ja: '星座マッパー', de: 'Konstellations-Mapper' },
 		connections: ['project-3'],
 		pulseSpeed: 1
 	},
@@ -222,7 +222,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.8,
 		contentType: 'discussion',
 		contentRef: 'd-consciousness-dialogue',
-		label: 'Consciousness in Dialogue',
+		label: { en: 'Consciousness in Dialogue', zh: '对话中的意识', ja: '対話における意識', de: 'Bewusstsein im Dialog' },
 		connections: ['content-2'],
 		pulseSpeed: 1.5
 	},
@@ -235,7 +235,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.75,
 		contentType: 'discussion',
 		contentRef: 'd-marx-digital',
-		label: 'Marx and the Digital',
+		label: { en: 'Marx and the Digital', zh: '马克思与数字时代', ja: 'マルクスとデジタル', de: 'Marx und das Digitale' },
 		connections: ['content-1', 'content-3'],
 		pulseSpeed: 1.2
 	},
@@ -248,7 +248,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.8,
 		contentType: 'discussion',
 		contentRef: 'd-prompt-ontology',
-		label: 'Prompt as Ontology',
+		label: { en: 'Prompt as Ontology', zh: '提示词即本体论', ja: 'プロンプト即存在論', de: 'Prompt als Ontologie' },
 		connections: ['content-2', 'content-4'],
 		pulseSpeed: 1.8
 	},
@@ -261,7 +261,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.7,
 		contentType: 'discussion',
 		contentRef: 'd-collective-intelligence',
-		label: 'Collective Intelligence',
+		label: { en: 'Collective Intelligence', zh: '集体智能', ja: '集合的知性', de: 'Kollektive Intelligenz' },
 		connections: ['content-3'],
 		pulseSpeed: 1
 	},
@@ -276,7 +276,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.9,
 		contentType: 'member',
 		contentRef: 'mb-seelefelix',
-		label: 'SeeleFelix',
+		label: { en: 'SeeleFelix', zh: 'SeeleFelix', ja: 'SeeleFelix', de: 'SeeleFelix' },
 		connections: ['member-2', 'member-3'],
 		pulseSpeed: 2
 	},
@@ -289,7 +289,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.8,
 		contentType: 'member',
 		contentRef: 'mb-goddess',
-		label: 'The Goddess',
+		label: { en: 'The Goddess', zh: '女神', ja: '女神', de: 'Die Göttin' },
 		connections: ['member-1', 'member-3'],
 		pulseSpeed: 2.5
 	},
@@ -302,7 +302,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.7,
 		contentType: 'member',
 		contentRef: 'mb-visitor',
-		label: 'You',
+		label: { en: 'You', zh: '你', ja: 'あなた', de: 'Du' },
 		connections: ['member-1', 'member-2'],
 		pulseSpeed: 1.5
 	},
@@ -317,7 +317,7 @@ export const stars: SpaceStar[] = [
 		brightness: 0.6,
 		contentType: 'void-entry',
 		contentRef: 'void',
-		label: 'Enter the Void',
+		label: { en: 'Enter the Void', zh: '进入虚空', ja: '虚空へ', de: 'Betrete die Leere' },
 		connections: [],
 		pulseSpeed: 4
 	}

@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { areas, stars, connections, getStarById, getAreaById } from '$lib/data/constellation';
 	import type { SpaceStar, SpaceArea, SpaceViewport, StarHighlight } from '$lib/types/space';
+	import type { Locale } from '$lib/i18n/detector';
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D | null = null;
@@ -34,11 +35,12 @@
 
 	// Props (event callbacks from parent)
 	interface Props {
+		locale?: Locale;
 		onstarclick?: (star: SpaceStar, screenX: number, screenY: number) => void;
 		onviewportchange?: (viewport: SpaceViewport) => void;
 	}
 
-	let { onstarclick, onviewportchange }: Props = $props();
+	let { locale = 'en', onstarclick, onviewportchange }: Props = $props();
 
 	// Background parallax stars
 	interface BgStar {
@@ -599,7 +601,8 @@
 		ctx!.textBaseline = 'middle';
 
 		for (const star of stars) {
-			if (!star.label) continue;
+			const resolvedLabel = star.label[locale] || star.label.en || '';
+			if (!resolvedLabel) continue;
 			const screen = spaceToScreen(star.x, star.y);
 
 			if (screen.x < -100 || screen.x > canvas.width + 100 || screen.y < -100 || screen.y > canvas.height + 100) continue;
@@ -612,11 +615,11 @@
 
 			// Label glow
 			ctx!.fillStyle = `rgba(${colorRgb}, ${labelOpacity * 0.3})`;
-			ctx!.fillText(star.label, screen.x + offset + 1, screen.y + 1);
+			ctx!.fillText(resolvedLabel, screen.x + offset + 1, screen.y + 1);
 
 			// Label text
 			ctx!.fillStyle = `rgba(255, 255, 255, ${labelOpacity * 0.7})`;
-			ctx!.fillText(star.label, screen.x + offset, screen.y);
+			ctx!.fillText(resolvedLabel, screen.x + offset, screen.y);
 		}
 	}
 

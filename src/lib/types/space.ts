@@ -1,5 +1,7 @@
 // Types for the Living Space portal
 
+import type { Locale } from '$lib/i18n/detector';
+
 export type AreaType = 'manifesto' | 'projects' | 'content' | 'members' | 'void';
 
 export type StarContentType = 'manifesto' | 'project' | 'discussion' | 'member' | 'fragment' | 'void-entry';
@@ -25,7 +27,7 @@ export interface SpaceStar {
 	brightness: number;
 	contentType: StarContentType;
 	contentRef: string; // ID to look up actual content
-	label: string; // shown when zoomed in
+	label: Partial<Record<Locale, string>>; // shown when zoomed in
 	connections: string[]; // IDs of connected stars
 	pulseSpeed?: number; // animation speed, 0 = no pulse
 }
