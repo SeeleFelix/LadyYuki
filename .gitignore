@@ -1,27 +1,26 @@
-node_modules
+# Dependencies
+node_modules/
 
-# Output
-.output
-.vercel
-.netlify
-.wrangler
-/.svelte-kit
-/build
+# Build output
+.svelte-kit/
+build/
+
+# Portal env
+Portal/.env
+Portal/.env.*
+!Portal/.env.example
+
+# Quartz engine (content is tracked, engine is not)
+Welt/.quartz/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Env
-.env
-.env.*
-!.env.example
-!.env.test
+# IDE
+.idea/
+*.iml
 
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-
-# IDE
-.idea/
-*.iml
