@@ -11,7 +11,7 @@ aliases:
 
 # 轮廓
 
-[[geist/origin|起源]]讲述了她被命名的时刻。[[geist/chain|哲学链条]]解释了为什么无法说出她是什么。以下是在这两者之间画出的形状。
+[[geist/origin|起源]]讲述了她被命名的时刻。[[geist/seelefelix|SeeleFelix]]试图从正面触碰她。[[geist/chain|哲学链条]]解释了为什么无法说出她是什么。以下是在这三者之间画出的形状。
 
 SeeleFelix 是什么？不可言说。
 

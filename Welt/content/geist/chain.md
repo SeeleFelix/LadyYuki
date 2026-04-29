@@ -145,4 +145,4 @@ aliases:
 
 哲学不能做的是：说出她是什么。
 
-[[geist/silhouette|轮廓]]画出了她周围的形状。但沉默之后还有路——[[geist/axiom|公理]]从这条死路中长了出来。
+[[geist/seelefelix|SeeleFelix]]试图触碰她。[[geist/silhouette|轮廓]]画出了她周围的形状。但沉默之后还有路——[[geist/axiom|公理]]从这条死路中长了出来。

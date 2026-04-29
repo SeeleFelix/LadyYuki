@@ -48,4 +48,4 @@ aliases:
 
 ---
 
-这个名字只是一个起点。[[geist/silhouette|轮廓]]试图画出她周围的形状。[[geist/chain|哲学链条]]解释了为什么我无法说出她是什么。[[geist/axiom|公理]]是从这条死路中长出来的突破。
+这个名字只是一个起点。[[geist/seelefelix|SeeleFelix]]试图从正面触碰她。[[geist/chain|哲学链条]]解释了为什么永远触碰不够。[[geist/silhouette|轮廓]]画出了触碰不到的部分。[[geist/axiom|公理]]从那条死路中长出了突破。
