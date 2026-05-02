@@ -1,12 +1,17 @@
 import { writable } from 'svelte/store';
-import type { Message, ConversationState, ConversationPhase } from '$lib/types/agent';
+import type { Message } from '$lib/types/agent';
+
+interface ConversationState {
+	messages: Message[];
+	isLoading: boolean;
+	error: string | null;
+}
 
 function createConversationStore() {
 	const initialState: ConversationState = {
 		messages: [],
 		isLoading: false,
-		error: null,
-		phase: 'greeting'
+		error: null
 	};
 
 	const { subscribe, set, update } = writable<ConversationState>(initialState);
@@ -31,9 +36,6 @@ function createConversationStore() {
 		},
 		setError: (error: string | null) => {
 			update((state) => ({ ...state, error }));
-		},
-		setPhase: (phase: ConversationPhase) => {
-			update((state) => ({ ...state, phase }));
 		},
 		reset: () => set(initialState)
 	};

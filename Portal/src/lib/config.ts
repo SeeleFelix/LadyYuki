@@ -32,7 +32,7 @@ export const config: AppConfig = {
 	deepseek: {
 		apiKey,
 		baseURL: 'https://api.deepseek.com',
-		model: 'deepseek-chat',
+		model: 'deepseek-v4-flash',
 		isConfigured
 	}
 } as const;

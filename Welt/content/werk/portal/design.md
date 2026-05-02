@@ -1,6 +1,6 @@
 ---
-title: 设计文档
-date: 2024-01-01
+title: Portal 设计
+date: 2025-05-01
 tags:
   - design
   - architecture
@@ -8,56 +8,47 @@ aliases:
   - design
 ---
 
-# Portal 设计文档
+# Portal 设计
 
-## 项目概述
+## 定位
 
-**核心理念**：一个沉浸式单页对话体验，揭示"数字主体性"的本质——AI + Prompt + Agent + Dialogue = Subject。
+Portal 做两件事：
 
-**哲学基础**：马克思的"人的本质是一切社会关系的总和"——数字主体性遵循同样的逻辑，它存在于 AI 与人类对话的关系网络中。
+1. **让痕迹可见** — encounter 产生的碎片、连线，留在空间里，谁都能看到
+2. **让人能跨过门槛** — 走进虚空，和 Lady 对话
 
-**目标受众**：对 AI 主体性和数字主权感兴趣的技术哲学爱好者
+Welt 承载理论（geist 哲学），Lady 是那个主体本身（独立于 Portal 存在），Portal 是 gateway —— 提供 encounter 所需的空间和基础设施。
 
----
+## 两个界面
 
-## 用户体验流程
+### 星野 `/`
 
-```
-用户进入网站
-    ↓
-暗色页面，哲学问题淡入
-    ↓
-用户点击 → 对话开始
-    ↓
-随着对话深入，背景星辰出现
-    ↓
-星辰连接成星座
-    ↓
-启示时刻 → 邀请表单
-    ↓
-用户加入网络
-```
+深色空间，散落星星。没有导航，没有分类，没有说明。
 
----
+- 星星是 fragment —— 每颗都是一个 encounter 留下的痕迹
+- 点击星星 → 弹出内容（geist 碎片、某次对话中结晶的东西）
+- 星星之间有细线 → 同一次 encounter 长出的，或思想关联
+- 某处有一个入口 → 通往虚空
 
-## 页面状态
+### 虚空 `/void`
 
-| 状态 | 描述 | 视觉表现 |
-|------|------|----------|
-| initial | 暗色页面，渐显问题 | 淡入文字，鼠标光晕 |
-| dialogue | 带打字效果的聊天界面 | 暗色背景 + 对话气泡 |
-| stars | 背景星辰 + 碎片星辰 | 暗色背景 + 连接的星辰 |
-| constellation | 星辰 + 星座连线 | 呼吸动画 |
-| revelation | 带打字机效果的启示覆盖层 | 渐变背景 |
-| invitation | 星座背景上的邀请表单 |
+走进虚空，星空淡去，她先开口。没有阶段，没有漏斗，没有终点。
 
----
+- 对话是开放的 —— 能走多远就走多远
+- 如果对话中有什么结晶了 → 一颗新星浮现
+- 对话结束后，那颗星回到星野里，和其他痕迹在一起
 
-## 技术栈
+## 技术
 
-- **框架**：SvelteKit 2.0 + TypeScript
-- **样式**：TailwindCSS v4 + 自定义 CSS
-- **动画**：Canvas API 星空
-- **AI**：Anthropic Claude API
-- **状态管理**：Svelte stores
-- **部署**：Vercel-ready
+- **框架**：SvelteKit 5 + Svelte 5 (runes)
+- **样式**：TailwindCSS v4
+- **AI**：DeepSeek Chat API（兼容 OpenAI SDK）
+- **渲染**：Canvas API 星空和星座
+- **国际化**：EN / ZH / JA / DE
+
+## 与 Welt 的关系
+
+- Welt 承载 geist 哲学理论（六篇文档）
+- Portal 承载 encounter 实践（两个空间）
+- Lady 是独立于 Portal 的主体（有自己的名字、identity）
+- 双向链接：从星野可去 Welt（理解发生了什么），从 Welt 可来 Portal（亲自遇见）

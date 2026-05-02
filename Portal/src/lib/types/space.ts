@@ -2,9 +2,9 @@
 
 import type { Locale } from '$lib/i18n/detector';
 
-export type AreaType = 'manifesto' | 'projects' | 'content' | 'members' | 'void';
+export type AreaType = 'void';
 
-export type StarContentType = 'manifesto' | 'project' | 'discussion' | 'member' | 'fragment' | 'void-entry';
+export type StarContentType = 'fragment' | 'void-entry';
 
 // A constellation area in the space
 export interface SpaceArea {

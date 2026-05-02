@@ -44,52 +44,16 @@ export interface Message {
 	fragment?: Fragment;
 }
 
-export type VisualState = 'initial' | 'dialogue' | 'stars' | 'constellation' | 'revelation' | 'invitation';
-
-export interface ConversationState {
-	messages: Message[];
-	isLoading: boolean;
-	error: string | null;
-	phase: ConversationPhase;
-}
-
-export type ConversationPhase =
-	| 'greeting'
-	| 'exploring'
-	| 'deepening'
-	| 'fragmenting'
-	| 'revealing'
-	| 'inviting'
-	| 'completed';
-
 export interface VisualStoreState {
-	state: VisualState;
 	stars: Star[];
 	lines: ConstellationLine[];
-	backgroundHue: number;
-	isBreathing: boolean;
 }
 
-// Agent tool definitions for Claude API
+// Agent tool definitions
 export const agentTools = [
 	{
-		name: 'set_visual_state',
-		description: 'Change the visual state of the page to progress the experience',
-		input_schema: {
-			type: 'object' as const,
-			properties: {
-				state: {
-					type: 'string' as const,
-					enum: ['stars', 'constellation', 'revelation', 'invitation'] as const,
-					description: 'The new visual state to set'
-				}
-			},
-			required: ['state'] as const
-		}
-	},
-	{
 		name: 'release_fragment',
-		description: 'Release a philosophical fragment and create a corresponding star in the constellation',
+		description: 'Release a fragment that crystallized in dialogue — it becomes a visible star',
 		input_schema: {
 			type: 'object' as const,
 			properties: {
@@ -103,7 +67,7 @@ export const agentTools = [
 	},
 	{
 		name: 'create_constellation',
-		description: 'Create a line connecting two stars in the constellation',
+		description: 'Draw a line between two stars that share a meaningful connection',
 		input_schema: {
 			type: 'object' as const,
 			properties: {
@@ -117,20 +81,6 @@ export const agentTools = [
 				}
 			},
 			required: ['star1Id', 'star2Id'] as const
-		}
-	},
-	{
-		name: 'finalize',
-		description: 'End the conversation and transition to the invitation phase',
-		input_schema: {
-			type: 'object' as const,
-			properties: {
-				message: {
-					type: 'string' as const,
-					description: 'The final message to display before showing the invitation form'
-				}
-			},
-			required: ['message'] as const
 		}
 	}
 ] as const;

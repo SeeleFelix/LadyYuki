@@ -1,22 +1,16 @@
-import { writable, derived } from 'svelte/store';
-import type { Star, ConstellationLine, VisualState, VisualStoreState, Fragment } from '$lib/types/agent';
+import { writable } from 'svelte/store';
+import type { Star, ConstellationLine, VisualStoreState, Fragment } from '$lib/types/agent';
 
 function createVisualStore() {
 	const initialState: VisualStoreState = {
-		state: 'initial',
 		stars: [],
-		lines: [],
-		backgroundHue: 0,
-		isBreathing: false
+		lines: []
 	};
 
 	const { subscribe, set, update } = writable<VisualStoreState>(initialState);
 
 	return {
 		subscribe,
-		setState: (newState: VisualState) => {
-			update((state) => ({ ...state, state: newState }));
-		},
 		addStar: (star: Omit<Star, 'id' | 'createdAt'> & { fragment?: Fragment }) => {
 			const newStar: Star = {
 				...star,
@@ -53,41 +47,8 @@ function createVisualStore() {
 
 			return newLine.id;
 		},
-		setBackgroundHue: (hue: number) => {
-			update((state) => ({ ...state, backgroundHue: hue }));
-		},
-		setBreathing: (isBreathing: boolean) => {
-			update((state) => ({ ...state, isBreathing }));
-		},
 		reset: () => set(initialState)
 	};
 }
 
 export const visualStore = createVisualStore();
-
-// Derived store for checking if we should show stars
-export const shouldShowStars = derived(visualStore, ($visual) =>
-	['stars', 'constellation', 'revelation', 'invitation'].includes($visual.state)
-);
-
-// Derived store for checking if we should show constellation lines
-export const shouldShowConstellation = derived(visualStore, ($visual) =>
-	['constellation', 'revelation', 'invitation'].includes($visual.state)
-);
-
-// Derived store for allowing star click interactions (includes 'stars' state)
-export const shouldAllowStarInteraction = derived(visualStore, ($visual) =>
-	['stars', 'constellation', 'revelation', 'invitation'].includes($visual.state)
-);
-
-// Derived store for revelation state
-export const isRevelation = derived(
-	visualStore,
-	($visual) => $visual.state === 'revelation'
-);
-
-// Derived store for invitation state
-export const isInvitation = derived(
-	visualStore,
-	($visual) => $visual.state === 'invitation'
-);

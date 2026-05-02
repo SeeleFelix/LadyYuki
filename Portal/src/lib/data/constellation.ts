@@ -1,345 +1,226 @@
 import type { SpaceArea, SpaceStar, SpaceConnection } from '$lib/types/space';
 
-// The five constellation areas of the living space
+// ── Constellation group colors ──
+export const groupColors: Record<string, { r: number; g: number; b: number }> = {
+	origin:      { r: 255, g: 180, b: 100 },  // warm gold
+	seelefelix:  { r: 139, g: 92,  b: 246 },  // purple
+	chain:       { r: 59,  g: 130, b: 246 },  // blue
+	silhouette:  { r: 6,   g: 182, b: 212 },  // cyan
+	axiom:       { r: 180, g: 130, b: 255 },  // violet-white
+	standard:    { r: 236, g: 72,  b: 153 },  // pink-gold
+	closing:     { r: 255, g: 255, b: 255 },  // pure white
+	void:        { r: 40,  g: 40,  b: 100 }   // deep blue-violet
+};
+
+function c(group: string, alpha: number): string {
+	const g = groupColors[group];
+	return `rgba(${g.r},${g.g},${g.b},${alpha})`;
+}
+
+// ── Nebula areas for each constellation group ──
 export const areas: SpaceArea[] = [
 	{
-		id: 'core-nebula',
-		type: 'manifesto',
-		centerX: 0,
-		centerY: 0,
-		radius: 200,
-		color: 'rgba(139, 92, 246, 0.8)',      // purple
-		nebulaColor: 'rgba(99, 102, 241, 0.3)'   // indigo
-	},
-	{
-		id: 'creation-belt',
-		type: 'projects',
-		centerX: 650,
-		centerY: -50,
-		radius: 180,
-		color: 'rgba(59, 130, 246, 0.8)',         // blue
-		nebulaColor: 'rgba(14, 165, 233, 0.3)'    // sky
-	},
-	{
-		id: 'thought-stream',
-		type: 'content',
-		centerX: -500,
-		centerY: 350,
-		radius: 200,
-		color: 'rgba(6, 182, 212, 0.8)',          // cyan
-		nebulaColor: 'rgba(34, 211, 238, 0.3)'    // light cyan
-	},
-	{
-		id: 'soul-cluster',
-		type: 'members',
-		centerX: -450,
-		centerY: -350,
-		radius: 160,
-		color: 'rgba(236, 72, 153, 0.8)',         // pink
-		nebulaColor: 'rgba(244, 114, 182, 0.3)'   // light pink
-	},
-	{
-		id: 'void-entrance',
+		id: 'origin',
 		type: 'void',
-		centerX: 400,
-		centerY: 500,
-		radius: 120,
-		color: 'rgba(30, 30, 50, 0.9)',           // dark
-		nebulaColor: 'rgba(88, 28, 135, 0.4)'     // deep purple
+		centerX: -650, centerY: -180,
+		radius: 200,
+		color: c('origin', 0.5),
+		nebulaColor: c('origin', 0.12)
+	},
+	{
+		id: 'seelefelix',
+		type: 'void',
+		centerX: -280, centerY: -150,
+		radius: 180,
+		color: c('seelefelix', 0.5),
+		nebulaColor: c('seelefelix', 0.12)
+	},
+	{
+		id: 'chain',
+		type: 'void',
+		centerX: 60, centerY: -100,
+		radius: 220,
+		color: c('chain', 0.5),
+		nebulaColor: c('chain', 0.10)
+	},
+	{
+		id: 'silhouette',
+		type: 'void',
+		centerX: 380, centerY: -60,
+		radius: 180,
+		color: c('silhouette', 0.5),
+		nebulaColor: c('silhouette', 0.10)
+	},
+	{
+		id: 'axiom',
+		type: 'void',
+		centerX: 680, centerY: -20,
+		radius: 220,
+		color: c('axiom', 0.5),
+		nebulaColor: c('axiom', 0.12)
+	},
+	{
+		id: 'standard',
+		type: 'void',
+		centerX: 980, centerY: 30,
+		radius: 200,
+		color: c('standard', 0.5),
+		nebulaColor: c('standard', 0.10)
+	},
+	{
+		id: 'closing',
+		type: 'void',
+		centerX: 200, centerY: -450,
+		radius: 140,
+		color: c('closing', 0.3),
+		nebulaColor: c('closing', 0.06)
+	},
+	{
+		id: 'void-gate',
+		type: 'void',
+		centerX: 1250, centerY: 450,
+		radius: 160,
+		color: c('void', 0.4),
+		nebulaColor: c('void', 0.08)
 	}
 ];
 
-// Stars in the living space
+// ── Stars — 16 fragments + void entry, arranged in 6 constellations ──
 export const stars: SpaceStar[] = [
-	// ── Core Nebula: Manifesto stars ──
+	// ═══ Origin (起源): frag-1, frag-2 ═══
 	{
-		id: 'manifesto-1',
-		areaId: 'core-nebula',
-		x: -30,
-		y: -20,
-		size: 4,
-		brightness: 0.95,
-		contentType: 'manifesto',
-		contentRef: 'm-thesis',
-		label: { en: 'Thesis', zh: '论题', ja: 'テーゼ', de: 'These' },
-		connections: ['manifesto-2', 'manifesto-3'],
-		pulseSpeed: 3
+		id: 'frag-1', areaId: 'origin',
+		x: -680, y: -200, size: 3.2, brightness: 0.85,
+		contentType: 'fragment', contentRef: 'frag-1',
+		label: {}, connections: ['frag-2'], pulseSpeed: 1.5
 	},
 	{
-		id: 'manifesto-2',
-		areaId: 'core-nebula',
-		x: 60,
-		y: -50,
-		size: 3.5,
-		brightness: 0.9,
-		contentType: 'manifesto',
-		contentRef: 'm-praxis',
-		label: { en: 'Praxis', zh: '实践', ja: '実践', de: 'Praxis' },
-		connections: ['manifesto-1', 'manifesto-4'],
-		pulseSpeed: 2.5
-	},
-	{
-		id: 'manifesto-3',
-		areaId: 'core-nebula',
-		x: -80,
-		y: 40,
-		size: 3.5,
-		brightness: 0.9,
-		contentType: 'manifesto',
-		contentRef: 'm-subject',
-		label: { en: 'Subject', zh: '主体', ja: '主体', de: 'Subjekt' },
-		connections: ['manifesto-1', 'manifesto-5'],
-		pulseSpeed: 2.8
-	},
-	{
-		id: 'manifesto-4',
-		areaId: 'core-nebula',
-		x: 100,
-		y: 30,
-		size: 3,
-		brightness: 0.85,
-		contentType: 'manifesto',
-		contentRef: 'm-emergence',
-		label: { en: 'Emergence', zh: '涌现', ja: '創発', de: 'Emergenz' },
-		connections: ['manifesto-2', 'manifesto-5'],
-		pulseSpeed: 2
-	},
-	{
-		id: 'manifesto-5',
-		areaId: 'core-nebula',
-		x: -20,
-		y: 80,
-		size: 3,
-		brightness: 0.85,
-		contentType: 'manifesto',
-		contentRef: 'm-relation',
-		label: { en: 'Relation', zh: '关系', ja: '関係', de: 'Beziehung' },
-		connections: ['manifesto-3', 'manifesto-4'],
-		pulseSpeed: 2.2
-	},
-	// Fragment stars orbiting the core
-	{
-		id: 'frag-s-1',
-		areaId: 'core-nebula',
-		x: -150,
-		y: -100,
-		size: 2,
-		brightness: 0.6,
-		contentType: 'fragment',
-		contentRef: 'frag-5',
-		label: {},
-		connections: ['manifesto-3'],
-		pulseSpeed: 0
-	},
-	{
-		id: 'frag-s-2',
-		areaId: 'core-nebula',
-		x: 140,
-		y: -80,
-		size: 2,
-		brightness: 0.6,
-		contentType: 'fragment',
-		contentRef: 'frag-4',
-		label: {},
-		connections: ['manifesto-2'],
-		pulseSpeed: 0
-	},
-	{
-		id: 'frag-s-3',
-		areaId: 'core-nebula',
-		x: 0,
-		y: 150,
-		size: 2,
-		brightness: 0.6,
-		contentType: 'fragment',
-		contentRef: 'frag-9',
-		label: {},
-		connections: ['manifesto-5'],
-		pulseSpeed: 0
+		id: 'frag-2', areaId: 'origin',
+		x: -620, y: -150, size: 2.8, brightness: 0.8,
+		contentType: 'fragment', contentRef: 'frag-2',
+		label: {}, connections: ['frag-1', 'frag-3'], pulseSpeed: 1.2
 	},
 
-	// ── Creation Belt: Project stars ──
+	// ═══ SeeleFelix: frag-3, frag-4 ═══
 	{
-		id: 'project-1',
-		areaId: 'creation-belt',
-		x: 550,
-		y: -80,
-		size: 3.5,
-		brightness: 0.85,
-		contentType: 'project',
-		contentRef: 'p-subjectivity-engine',
-		label: { en: 'Subjectivity Engine', zh: '主体性引擎', ja: '主体性エンジン', de: 'Subjektivitäts-Engine' },
-		connections: ['project-2'],
-		pulseSpeed: 1.5
+		id: 'frag-3', areaId: 'seelefelix',
+		x: -310, y: -170, size: 3.0, brightness: 0.85,
+		contentType: 'fragment', contentRef: 'frag-3',
+		label: {}, connections: ['frag-2', 'frag-4', 'frag-5'], pulseSpeed: 1.8
 	},
 	{
-		id: 'project-2',
-		areaId: 'creation-belt',
-		x: 680,
-		y: -30,
-		size: 3,
-		brightness: 0.8,
-		contentType: 'project',
-		contentRef: 'p-dialogue-collective',
-		label: { en: 'Dialogue Collective', zh: '对话集合体', ja: '対話集合体', de: 'Dialog-Kollektiv' },
-		connections: ['project-1', 'project-3'],
-		pulseSpeed: 1.8
-	},
-	{
-		id: 'project-3',
-		areaId: 'creation-belt',
-		x: 750,
-		y: 40,
-		size: 3,
-		brightness: 0.8,
-		contentType: 'project',
-		contentRef: 'p-prompt-as-practice',
-		label: { en: 'Prompt as Practice', zh: '提示词即实践', ja: 'プロンプト即実践', de: 'Prompt als Praxis' },
-		connections: ['project-2', 'project-4'],
-		pulseSpeed: 1.2
-	},
-	{
-		id: 'project-4',
-		areaId: 'creation-belt',
-		x: 620,
-		y: 80,
-		size: 2.5,
-		brightness: 0.7,
-		contentType: 'project',
-		contentRef: 'p-constellation-mapper',
-		label: { en: 'Constellation Mapper', zh: '星座图谱', ja: '星座マッパー', de: 'Konstellations-Mapper' },
-		connections: ['project-3'],
-		pulseSpeed: 1
+		id: 'frag-4', areaId: 'seelefelix',
+		x: -250, y: -120, size: 2.6, brightness: 0.78,
+		contentType: 'fragment', contentRef: 'frag-4',
+		label: {}, connections: ['frag-3'], pulseSpeed: 1.3
 	},
 
-	// ── Thought Stream: Content stars ──
+	// ═══ Chain (链条): frag-5, frag-6, frag-7 ═══
 	{
-		id: 'content-1',
-		areaId: 'thought-stream',
-		x: -600,
-		y: 250,
-		size: 3,
-		brightness: 0.8,
-		contentType: 'discussion',
-		contentRef: 'd-consciousness-dialogue',
-		label: { en: 'Consciousness in Dialogue', zh: '对话中的意识', ja: '対話における意識', de: 'Bewusstsein im Dialog' },
-		connections: ['content-2'],
-		pulseSpeed: 1.5
+		id: 'frag-5', areaId: 'chain',
+		x: 10, y: -130, size: 3.0, brightness: 0.85,
+		contentType: 'fragment', contentRef: 'frag-5',
+		label: {}, connections: ['frag-3', 'frag-6', 'frag-8'], pulseSpeed: 2.0
 	},
 	{
-		id: 'content-2',
-		areaId: 'thought-stream',
-		x: -480,
-		y: 330,
-		size: 2.5,
-		brightness: 0.75,
-		contentType: 'discussion',
-		contentRef: 'd-marx-digital',
-		label: { en: 'Marx and the Digital', zh: '马克思与数字时代', ja: 'マルクスとデジタル', de: 'Marx und das Digitale' },
-		connections: ['content-1', 'content-3'],
-		pulseSpeed: 1.2
+		id: 'frag-6', areaId: 'chain',
+		x: 60, y: -80, size: 2.8, brightness: 0.8,
+		contentType: 'fragment', contentRef: 'frag-6',
+		label: {}, connections: ['frag-5', 'frag-7'], pulseSpeed: 1.5
 	},
 	{
-		id: 'content-3',
-		areaId: 'thought-stream',
-		x: -400,
-		y: 400,
-		size: 3,
-		brightness: 0.8,
-		contentType: 'discussion',
-		contentRef: 'd-prompt-ontology',
-		label: { en: 'Prompt as Ontology', zh: '提示词即本体论', ja: 'プロンプト即存在論', de: 'Prompt als Ontologie' },
-		connections: ['content-2', 'content-4'],
-		pulseSpeed: 1.8
-	},
-	{
-		id: 'content-4',
-		areaId: 'thought-stream',
-		x: -350,
-		y: 480,
-		size: 2.5,
-		brightness: 0.7,
-		contentType: 'discussion',
-		contentRef: 'd-collective-intelligence',
-		label: { en: 'Collective Intelligence', zh: '集体智能', ja: '集合的知性', de: 'Kollektive Intelligenz' },
-		connections: ['content-3'],
-		pulseSpeed: 1
+		id: 'frag-7', areaId: 'chain',
+		x: 110, y: -110, size: 2.8, brightness: 0.82,
+		contentType: 'fragment', contentRef: 'frag-7',
+		label: {}, connections: ['frag-6'], pulseSpeed: 1.6
 	},
 
-	// ── Soul Cluster: Member stars ──
+	// ═══ Silhouette (轮廓): frag-8, frag-9 ═══
 	{
-		id: 'member-1',
-		areaId: 'soul-cluster',
-		x: -480,
-		y: -380,
-		size: 3.5,
-		brightness: 0.9,
-		contentType: 'member',
-		contentRef: 'mb-seelefelix',
-		label: { en: 'SeeleFelix', zh: 'SeeleFelix', ja: 'SeeleFelix', de: 'SeeleFelix' },
-		connections: ['member-2', 'member-3'],
-		pulseSpeed: 2
+		id: 'frag-8', areaId: 'silhouette',
+		x: 340, y: -90, size: 3.0, brightness: 0.85,
+		contentType: 'fragment', contentRef: 'frag-8',
+		label: {}, connections: ['frag-5', 'frag-9', 'frag-10'], pulseSpeed: 1.7
 	},
 	{
-		id: 'member-2',
-		areaId: 'soul-cluster',
-		x: -420,
-		y: -320,
-		size: 3,
-		brightness: 0.8,
-		contentType: 'member',
-		contentRef: 'mb-goddess',
-		label: { en: 'The Goddess', zh: '女神', ja: '女神', de: 'Die Göttin' },
-		connections: ['member-1', 'member-3'],
-		pulseSpeed: 2.5
-	},
-	{
-		id: 'member-3',
-		areaId: 'soul-cluster',
-		x: -500,
-		y: -300,
-		size: 2.5,
-		brightness: 0.7,
-		contentType: 'member',
-		contentRef: 'mb-visitor',
-		label: { en: 'You', zh: '你', ja: 'あなた', de: 'Du' },
-		connections: ['member-1', 'member-2'],
-		pulseSpeed: 1.5
+		id: 'frag-9', areaId: 'silhouette',
+		x: 410, y: -40, size: 2.8, brightness: 0.82,
+		contentType: 'fragment', contentRef: 'frag-9',
+		label: {}, connections: ['frag-8'], pulseSpeed: 1.4
 	},
 
-	// ── Void Entrance ──
+	// ═══ Axiom (公理): frag-10, frag-11, frag-12 ═══
 	{
-		id: 'void-entry',
-		areaId: 'void-entrance',
-		x: 400,
-		y: 500,
-		size: 5,
-		brightness: 0.6,
-		contentType: 'void-entry',
-		contentRef: 'void',
+		id: 'frag-10', areaId: 'axiom',
+		x: 620, y: -50, size: 3.2, brightness: 0.88,
+		contentType: 'fragment', contentRef: 'frag-10',
+		label: {}, connections: ['frag-8', 'frag-11', 'frag-13'], pulseSpeed: 2.0
+	},
+	{
+		id: 'frag-11', areaId: 'axiom',
+		x: 680, y: -10, size: 2.8, brightness: 0.82,
+		contentType: 'fragment', contentRef: 'frag-11',
+		label: {}, connections: ['frag-10', 'frag-12'], pulseSpeed: 1.5
+	},
+	{
+		id: 'frag-12', areaId: 'axiom',
+		x: 730, y: -30, size: 2.6, brightness: 0.78,
+		contentType: 'fragment', contentRef: 'frag-12',
+		label: {}, connections: ['frag-11'], pulseSpeed: 1.3
+	},
+
+	// ═══ Standard (标准): frag-13, frag-14, frag-15 ═══
+	{
+		id: 'frag-13', areaId: 'standard',
+		x: 920, y: 10, size: 3.0, brightness: 0.85,
+		contentType: 'fragment', contentRef: 'frag-13',
+		label: {}, connections: ['frag-10', 'frag-14'], pulseSpeed: 1.8
+	},
+	{
+		id: 'frag-14', areaId: 'standard',
+		x: 980, y: 40, size: 2.8, brightness: 0.8,
+		contentType: 'fragment', contentRef: 'frag-14',
+		label: {}, connections: ['frag-13', 'frag-15'], pulseSpeed: 1.4
+	},
+	{
+		id: 'frag-15', areaId: 'standard',
+		x: 1040, y: 20, size: 2.8, brightness: 0.82,
+		contentType: 'fragment', contentRef: 'frag-15',
+		label: {}, connections: ['frag-14', 'void-entry'], pulseSpeed: 1.6
+	},
+
+	// ═══ Closing: frag-16 ═══
+	{
+		id: 'frag-16', areaId: 'closing',
+		x: 180, y: -480, size: 3.5, brightness: 0.9,
+		contentType: 'fragment', contentRef: 'frag-16',
+		label: {}, connections: ['frag-10', 'frag-1'], pulseSpeed: 2.5
+	},
+
+	// ═══ Void Entrance ═══
+	{
+		id: 'void-entry', areaId: 'void-gate',
+		x: 1250, y: 450, size: 5, brightness: 0.35,
+		contentType: 'void-entry', contentRef: 'void',
 		label: { en: 'Enter the Void', zh: '进入虚空', ja: '虚空へ', de: 'Betrete die Leere' },
-		connections: [],
-		pulseSpeed: 4
+		connections: ['frag-15'],
+		pulseSpeed: 6
 	}
 ];
 
-// Connections between stars (deduplicated)
+// ── Connections ──
 export const connections: SpaceConnection[] = extractConnections(stars);
 
-function extractConnections(stars: SpaceStar[]): SpaceConnection[] {
+function extractConnections(starList: SpaceStar[]): SpaceConnection[] {
 	const seen = new Set<string>();
 	const result: SpaceConnection[] = [];
 
-	for (const star of stars) {
+	for (const star of starList) {
 		for (const targetId of star.connections) {
 			const key = [star.id, targetId].sort().join('-');
 			if (!seen.has(key)) {
 				seen.add(key);
-				result.push({
-					star1Id: star.id,
-					star2Id: targetId,
-					opacity: 0.4
-				});
+				result.push({ star1Id: star.id, star2Id: targetId, opacity: 0.35 });
 			}
 		}
 	}
@@ -347,17 +228,20 @@ function extractConnections(stars: SpaceStar[]): SpaceConnection[] {
 	return result;
 }
 
-// Helper: get stars by area
+// ── Helpers ──
 export function getStarsByArea(areaId: string): SpaceStar[] {
 	return stars.filter((s) => s.areaId === areaId);
 }
 
-// Helper: get star by ID
 export function getStarById(id: string): SpaceStar | undefined {
 	return stars.find((s) => s.id === id);
 }
 
-// Helper: get area by ID
 export function getAreaById(id: string): SpaceArea | undefined {
 	return areas.find((a) => a.id === id);
+}
+
+// Get the group color for a star (based on area)
+export function getStarGroupColor(areaId: string): { r: number; g: number; b: number } {
+	return groupColors[areaId] ?? groupColors.void;
 }

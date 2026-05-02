@@ -8,7 +8,5 @@ export { default as DialogueBubble } from './DialogueBubble.svelte';
 export { default as VoidMessage } from './VoidMessage.svelte';
 export { default as InputArea } from './InputArea.svelte';
 export { default as CosmicInput } from './CosmicInput.svelte';
-export { default as Revelation } from './Revelation.svelte';
-export { default as InvitationForm } from './InvitationForm.svelte';
 export { default as FormattedText } from './FormattedText.svelte';
 export { default as FragmentDetail } from './FragmentDetail.svelte';
