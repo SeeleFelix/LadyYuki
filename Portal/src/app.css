@@ -1,107 +1,122 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /* Custom dark theme for SeeleFelix */
 :root {
-	--color-deep-black: #0a0a0f;
-	--color-star-white: #ffffff;
-	--color-star-glow: rgba(255, 255, 255, 0.8);
-	--color-constellation-line: rgba(100, 149, 237, 0.4);
-	--color-accent-purple: #8b5cf6;
-	--color-accent-blue: #3b82f6;
-	--color-text-muted: rgba(255, 255, 255, 0.6);
-	--color-text-bright: rgba(255, 255, 255, 0.95);
+  --color-deep-black: #0a0a0f;
+  --color-star-white: #ffffff;
+  --color-star-glow: rgba(255, 255, 255, 0.8);
+  --color-constellation-line: rgba(100, 149, 237, 0.4);
+  --color-accent-purple: #8b5cf6;
+  --color-accent-blue: #3b82f6;
+  --color-text-muted: rgba(255, 255, 255, 0.6);
+  --color-text-bright: rgba(255, 255, 255, 0.95);
 }
 
 html,
 body {
-	margin: 0;
-	padding: 0;
-	background-color: var(--color-deep-black);
-	color: var(--color-text-bright);
-	font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-	height: 100%;
-	width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-deep-black);
+  color: var(--color-text-bright);
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  height: 100%;
+  width: 100%;
 }
 
 body.immersive {
-	overflow: hidden;
+  overflow: hidden;
 }
 
 /* Smooth transitions for state changes */
 * {
-	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-	width: 6px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-	background: transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.2);
-	border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Text glow effect for philosophical text */
 .text-glow {
-	text-shadow: 0 0 20px rgba(255, 255, 255, 0.3),
-				 0 0 40px rgba(255, 255, 255, 0.2),
-				 0 0 60px rgba(255, 255, 255, 0.1);
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.3),
+    0 0 40px rgba(255, 255, 255, 0.2),
+    0 0 60px rgba(255, 255, 255, 0.1);
 }
 
 /* Subtle text glow for secondary elements */
 .text-glow-subtle {
-	text-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
 }
 
 /* Breathing animation for constellation */
 @keyframes breathe {
-	0%, 100% {
-		transform: scale(1);
-		opacity: 1;
-	}
-	50% {
-		transform: scale(1.02);
-		opacity: 0.9;
-	}
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
 }
 
 .breathing {
-	animation: breathe 4s ease-in-out infinite;
+  animation: breathe 4s ease-in-out infinite;
 }
 
 /* Pulse animation for new stars */
 @keyframes star-pulse {
-	0%, 100% {
-		opacity: 1;
-		transform: scale(1);
-	}
-	50% {
-		opacity: 0.7;
-		transform: scale(1.1);
-	}
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
 }
 
 .star-pulse {
-	animation: star-pulse 2s ease-in-out infinite;
+  animation: star-pulse 2s ease-in-out infinite;
 }
 
 /* Typing cursor animation */
 @keyframes blink {
-	0%, 50% { opacity: 1; }
-	51%, 100% { opacity: 0; }
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .cursor-blink::after {
-	content: '|';
-	animation: blink 1s infinite;
-	color: var(--color-accent-purple);
+  content: "|";
+  animation: blink 1s infinite;
+  color: var(--color-accent-purple);
 }
