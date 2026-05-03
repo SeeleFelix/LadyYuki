@@ -12,10 +12,18 @@
   import type { SpaceStar, SpaceViewport } from "$lib/types/space";
   import type { Fragment } from "$lib/types/agent";
   import type { Locale } from "$lib/i18n/detector";
+  import { drawVoidGate, drawIgnition } from "./living-space/void-gate";
+  import {
+    drawBgStars,
+    drawNebulas,
+    drawMilkyWay,
+  } from "./living-space/background";
+  import type { EmergingFrag, Whisper } from "./living-space/types";
 
   // ── Props ──
   interface Props {
     locale?: Locale;
+    paused?: boolean;
     onstarclick?: (
       star: SpaceStar,
       fragment: Fragment,
@@ -25,9 +33,14 @@
     onentervoid?: () => void;
   }
 
-  let { locale = "en", onstarclick, onentervoid }: Props = $props();
+  let {
+    locale = "en",
+    paused = false,
+    onstarclick,
+    onentervoid,
+  }: Props = $props();
 
-  let canvas: HTMLCanvasElement;
+  let canvas!: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
   let animationFrameId: number;
 
@@ -62,56 +75,117 @@
     shortText: string;
     fragment: Fragment | null;
     connections: string[];
+    proximity: number;
     screenX: number;
     screenY: number;
     textAlpha: number;
-    emergeBlur: number;
-    emergeBrightness: number;
-    proximity: number;
   }
 
   let emergingFrags: EmergingFrag[] = $state([]);
   let rippleX = $state(0);
   let rippleY = $state(0);
-  let rippleAge = $state(Infinity); // seconds since ripple started
+  let rippleAge = $state(Infinity);
   const RIPPLE_DURATION = 0.45;
-  let currentEmergeIdx = $state(-1);
-  let voidRevealed = $state(false);
-  let allRead = $state(false);
   let readCount = $state(0);
+  let revelationPulse = $state(0); // 1→0 when all 16 read, fades over 3s
 
   // Emergence timing constants
-  const EMERGE_DURATION = 1.2; // text fade-in (slower, more dramatic)
-  const LINGER_DURATION = 3.5; // text stays visible
-  const CRYSTALLIZE_DURATION = 1.0; // halo expands
-  const NEXT_DELAY = 1.5; // delay before next fragment after read
+  const EMERGE_DURATION = 1.2;
+  const LINGER_DURATION = 3.5;
+  const CRYSTALLIZE_DURATION = 1.0;
 
-  let nextEmergeTime = $state(0);
+  let emergeQueue: EmergingFrag[] = [];
 
-  // Emergence order (by group, then by fragment ID within group)
-  const EMERGE_ORDER = [
-    { area: "origin", fragIds: ["frag-1", "frag-2"] },
-    { area: "seelefelix", fragIds: ["frag-3", "frag-4"] },
-    { area: "chain", fragIds: ["frag-5", "frag-6", "frag-7"] },
-    { area: "silhouette", fragIds: ["frag-8", "frag-9"] },
-    { area: "axiom", fragIds: ["frag-10", "frag-11", "frag-12"] },
-    { area: "standard", fragIds: ["frag-13", "frag-14", "frag-15"] },
-    { area: "closing", fragIds: ["frag-16"] },
-  ];
+  // ── Void breathing ──
+  const VOID_BREATH_PERIOD = 12;
+  let voidBreathTime = $state(0); // cycles continuously
+
+  // ── Whispers ──
+  interface Whisper {
+    sx: number;
+    sy: number;
+    tx: number;
+    ty: number;
+    text: string;
+    progress: number; // 0→1
+    color: { r: number; g: number; b: number };
+    life: number; // seconds remaining
+  }
+  const WHISPER_DURATION = 3.5;
+  let whispers: Whisper[] = $state([]);
+  let whisperCooldown = $state(0);
+
+  // ── Resonance ──
+  interface Resonance {
+    starId: string;
+    color: { r: number; g: number; b: number };
+    startTime: number;
+    delay: number; // propagation delay
+    duration: number;
+  }
+  const RESONANCE_DURATION = 2.0;
+  let resonances: Resonance[] = $state([]);
 
   // ── Viewport ──
   // No hard bounds. Guidance is visual gravity, not walls.
   let viewport = $state<SpaceViewport>({
     x: 0,
     y: 0,
-    zoom: 0.7,
+    zoom: 0.35,
     targetX: 0,
     targetY: 0,
-    targetZoom: 0.7,
+    targetZoom: 0.35,
   });
 
   // Gravity drift target — set by force simulation result
   let driftTarget = $state({ x: 0, y: 0 });
+
+  // ── Auto-pan cinematography ──
+  type AutoPanPhase = "none" | "panToVoid" | "followWhisper" | "settle";
+  let autoPanPhase = $state<AutoPanPhase>("none");
+  let settleTimer = $state(0);
+  let pendingWhisper: {
+    sx: number;
+    sy: number;
+    tx: number;
+    ty: number;
+    text: string;
+    color: { r: number; g: number; b: number };
+  } | null = null;
+  let activeWhisperIdx = $state(-1);
+  let isFirstOpening = $state(false);
+  let openingInitialDist = $state(1);
+  let bootTime = 0;
+  let ignitionAge = 0;
+  let ignitionShake = 0;
+  let ignitionParticles: Array<{
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    life: number;
+    maxLife: number;
+    color: { r: number; g: number; b: number };
+  }> = [];
+
+  function isAutoPanning() {
+    return autoPanPhase !== "none";
+  }
+
+  function launchPendingWhisper() {
+    if (!pendingWhisper) return;
+    whispers.push({
+      ...pendingWhisper,
+      progress: 0,
+      life: WHISPER_DURATION,
+    });
+    activeWhisperIdx = whispers.length - 1;
+    pendingWhisper = null;
+    isFirstOpening = false;
+    openingInitialDist = 1;
+    openingTextAlpha = 0;
+    autoPanPhase = "followWhisper";
+  }
 
   // ── Mouse / drag ──
   let mouseScreenX = 0,
@@ -124,8 +198,6 @@
   let dragStartViewX = 0,
     dragStartViewY = 0;
   let dragThresholdMet = false;
-  let autoPanTarget: { x: number; y: number } | null = null;
-
   // ── Chunk-based infinite background ──
   const CHUNK_SIZE = 1200;
 
@@ -188,7 +260,7 @@
     }>;
   }
   let shootingStars: ShootingStar[] = [];
-  let nextShootingStarTime = 0;
+  let nextShootingStarTime = Infinity; // suppressed until after explosion
 
   function chunkKey(cx: number, cy: number): string {
     return `${cx},${cy}`;
@@ -448,9 +520,14 @@
     buildConnData();
     createEDots();
 
-    // Start first emergence after short delay
-    nextEmergeTime = performance.now() / 1000 + 1.5;
-    currentEmergeIdx = -1;
+    // Timeline: text at 1.5s, fissure at 10s, explosion at 12s, first whisper at 15s
+    bootTime = performance.now() / 1000;
+    setTimeout(() => {
+      openingPhase = "typing";
+      openingRevealIdx = 1;
+      openingRevealTimer = 0;
+    }, 1500);
+    firstWhisperTime = bootTime + 9;
 
     animate();
   });
@@ -489,9 +566,18 @@
       shortText: string;
     }> = [];
 
-    for (const group of EMERGE_ORDER) {
+    const fragGroups: Array<{ area: string; ids: string[] }> = [
+      { area: "origin", ids: ["frag-1", "frag-2"] },
+      { area: "seelefelix", ids: ["frag-3", "frag-4"] },
+      { area: "chain", ids: ["frag-5", "frag-6", "frag-7"] },
+      { area: "silhouette", ids: ["frag-8", "frag-9"] },
+      { area: "axiom", ids: ["frag-10", "frag-11", "frag-12"] },
+      { area: "standard", ids: ["frag-13", "frag-14", "frag-15"] },
+      { area: "closing", ids: ["frag-16"] },
+    ];
+    for (const group of fragGroups) {
       const gColor = groupColors[group.area] ?? groupColors.void;
-      for (const fragId of group.fragIds) {
+      for (const fragId of group.ids) {
         const frag = getFragmentById(fragId, locale as Locale) ?? null;
         const existingStar = getStarById(fragId);
         nodes.push({
@@ -599,23 +685,22 @@
       shortText: n.shortText,
       fragment: n.fragment,
       connections: n.connections,
+      proximity: 0,
       screenX: 0,
       screenY: 0,
       textAlpha: 0,
-      emergeBlur: 0,
-      emergeBrightness: 1,
-      proximity: 0,
     }));
 
-    // Set initial viewport to center of mass of origin group
-    const originNodes = emergingFrags.filter((f) => f.groupArea === "origin");
-    if (originNodes.length > 0) {
-      const cx = originNodes.reduce((s, f) => s + f.x, 0) / originNodes.length;
-      const cy = originNodes.reduce((s, f) => s + f.y, 0) / originNodes.length;
-      driftTarget.x = cx;
-      driftTarget.y = cy;
-      viewport.x = viewport.targetX = cx;
-      viewport.y = viewport.targetY = cy;
+    // Build emergence queue: all fragment stars in order
+    emergeQueue = emergingFrags.filter((f) => f.starId !== "void-entry");
+
+    // Center initial viewport on void entrance
+    const voidNode = emergingFrags.find((f) => f.starId === "void-entry");
+    if (voidNode) {
+      driftTarget.x = voidNode.x;
+      driftTarget.y = voidNode.y;
+      viewport.x = viewport.targetX = voidNode.x;
+      viewport.y = viewport.targetY = voidNode.y;
     }
   }
 
@@ -681,13 +766,13 @@
 
   // ── Mouse handlers ──
   function onMouseDown(e: MouseEvent) {
+    if (isAutoPanning()) return;
     isDragging = true;
     dragThresholdMet = false;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     dragStartViewX = viewport.x;
     dragStartViewY = viewport.y;
-    autoPanTarget = null;
   }
 
   function onMouseMove(e: MouseEvent) {
@@ -720,9 +805,10 @@
   }
 
   function onWheel(e: WheelEvent) {
+    if (isAutoPanning()) return;
     e.preventDefault();
     viewport.targetZoom = Math.max(
-      0.5,
+      0.3,
       Math.min(1.2, viewport.targetZoom * (1 - e.deltaY * 0.001)),
     );
   }
@@ -733,6 +819,7 @@
     lastTouchY = 0;
 
   function onTouchStart(e: TouchEvent) {
+    if (isAutoPanning()) return;
     e.preventDefault();
     if (e.touches.length === 1) {
       const t = e.touches[0];
@@ -744,7 +831,6 @@
       dragStartY = t.clientY;
       dragStartViewX = viewport.x;
       dragStartViewY = viewport.y;
-      autoPanTarget = null;
     } else if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -779,7 +865,7 @@
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (touchDist0 > 0) {
         viewport.targetZoom = Math.max(
-          0.5,
+          0.3,
           Math.min(1.2, viewport.targetZoom * (dist / touchDist0)),
         );
       }
@@ -799,7 +885,6 @@
     // Hit test stars in 'star' phase
     for (const ef of emergingFrags) {
       if (ef.phase !== "star") continue;
-      if (ef.starId === "void-entry" && !voidRevealed) continue;
 
       const hitR = Math.max(ef.size * 10, 30);
       if (Math.hypot(wx - ef.x, wy - ef.y) <= hitR) {
@@ -839,49 +924,56 @@
     if (ef && !ef.read) {
       ef.read = true;
       readCount++;
-      if (readCount >= 16) allRead = true;
-      if (readCount >= 3) voidRevealed = true;
-      // Schedule next emergence
-      nextEmergeTime = performance.now() / 1000 + NEXT_DELAY;
-    }
-  }
-
-  // ── Emergence logic ──
-  function updateEmergence(time: number) {
-    // Check if we should start next emergence
-    if (currentEmergeIdx < emergingFrags.length - 1 && time >= nextEmergeTime) {
-      // Find next hidden fragment (excluding void-entry)
-      for (let i = currentEmergeIdx + 1; i < emergingFrags.length; i++) {
-        if (
-          emergingFrags[i].phase === "hidden" &&
-          emergingFrags[i].starId !== "void-entry"
-        ) {
-          currentEmergeIdx = i;
-          const ef = emergingFrags[i];
-          ef.phase = "emerging";
-          ef.phaseStart = time;
-          nextEmergeTime = Infinity; // will be set when this one is read
-          // Auto-pan to show the emerging fragment
-          autoPanTarget = { x: ef.x, y: ef.y };
-          viewport.targetX = ef.x;
-          viewport.targetY = ef.y;
-          driftTarget.x = ef.x;
-          driftTarget.y = ef.y;
-          viewport.targetZoom = Math.max(
-            0.65,
-            Math.min(0.85, viewport.targetZoom),
-          );
-          break;
+      if (readCount >= 16) revelationPulse = 1;
+      // Trigger resonance on connected stars
+      const time = performance.now() / 1000;
+      for (const connId of ef.connections) {
+        const connected = emergingFrags.find((f) => f.starId === connId);
+        if (!connected || connected.phase === "hidden") continue;
+        resonances.push({
+          starId: connId,
+          color: ef.color,
+          startTime: time,
+          delay: 0,
+          duration: RESONANCE_DURATION,
+        });
+        // Propagate to second-degree connections with delay
+        for (const conn2Id of connected.connections) {
+          if (conn2Id === ef.starId) continue;
+          const conn2 = emergingFrags.find((f) => f.starId === conn2Id);
+          if (!conn2 || conn2.phase === "hidden") continue;
+          resonances.push({
+            starId: conn2Id,
+            color: connected.color,
+            startTime: time,
+            delay: 0.3,
+            duration: RESONANCE_DURATION * 0.7,
+          });
         }
       }
     }
+  }
 
-    // Update phases
+  // ── Star emergence (whisper-driven, with initial boot) ──
+  let firstWhisperTime = $state(Infinity);
+  let openingTextAlpha = $state(0);
+  let openingTextScreen = $state({ x: 0, y: 0 });
+  let openingRevealIdx = $state(0); // streaming text char index
+  let openingRevealTimer = $state(0); // accumulator for char reveal
+  const OPENING_TEXT = "她在诉说。";
+  let openingPhase = $state<"idle" | "typing" | "hold" | "fading">("idle");
+
+  function updateEmergence(time: number) {
+    // Void entrance always visible from start (vortex state)
+    const voidEf = emergingFrags.find((f) => f.starId === "void-entry");
+    if (voidEf && voidEf.phase === "hidden" && time > 0) {
+      voidEf.phase = "star";
+    }
+
+    // Phase transitions
     for (const ef of emergingFrags) {
       if (ef.phase === "hidden" || ef.phase === "star") continue;
-
       const elapsed = time - ef.phaseStart;
-
       if (ef.phase === "emerging" && elapsed >= EMERGE_DURATION) {
         ef.phase = "lingering";
         ef.phaseStart = time;
@@ -895,15 +987,6 @@
         ef.phase = "star";
       }
     }
-
-    // Reveal void entrance when all read
-    if (allRead) {
-      const voidEf = emergingFrags.find((f) => f.starId === "void-entry");
-      if (voidEf && voidEf.phase === "hidden") {
-        voidEf.phase = "star";
-        voidRevealed = true;
-      }
-    }
   }
 
   // ── Main animation ──
@@ -913,67 +996,273 @@
 
     // Smooth viewport
     const lerp = 0.08;
-    viewport.x += (viewport.targetX - viewport.x) * lerp;
-    viewport.y += (viewport.targetY - viewport.y) * lerp;
-    viewport.zoom += (viewport.targetZoom - viewport.zoom) * lerp;
 
-    // Update emergence
-    updateEmergence(time);
+    // Cinematic zoom with easing + release transition
+    const elapsed = time - bootTime;
+    const easeInOut = (t: number) =>
+      t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    if (!isAutoPanning() && elapsed < 15) {
+      let cinematicZoom = 0.65;
+      if (ignitionAge <= 0) {
+        const t = Math.min(elapsed / 9, 1);
+        cinematicZoom = 0.35 + easeInOut(t) * 0.3;
+      } else if (ignitionAge < 0.5) {
+        cinematicZoom = 0.65 + Math.sin((ignitionAge * Math.PI) / 0.5) * 0.13;
+      }
+      if (elapsed < 13) {
+        viewport.targetZoom = cinematicZoom;
+      } else {
+        const fade = (elapsed - 13) / 2;
+        viewport.targetZoom =
+          cinematicZoom + (viewport.zoom - cinematicZoom) * fade;
+      }
+    }
 
-    // Update screen positions + emergence text properties + proximity
+    // Streaming text: deliberate character reveal, 0.7s per char
+    if (openingPhase === "typing") {
+      openingRevealTimer += 1 / 60;
+      if (openingRevealTimer >= 1.0 && openingRevealIdx < OPENING_TEXT.length) {
+        openingRevealIdx++;
+        openingRevealTimer = 0;
+      }
+      if (openingRevealIdx >= OPENING_TEXT.length) {
+        openingPhase = "hold";
+        openingRevealTimer = 0;
+      }
+      openingTextAlpha = 1;
+    } else if (openingPhase === "hold") {
+      openingRevealTimer += 1 / 60;
+      openingTextAlpha = 1;
+      // Begin fading as first stars appear (~4s after boot)
+      if (openingRevealTimer >= 1.5) {
+        openingPhase = "fading";
+        openingRevealTimer = 0;
+      }
+    } else if (openingPhase === "fading") {
+      openingRevealTimer += 1 / 60;
+      openingTextAlpha = Math.max(0, 1 - openingRevealTimer / 2.5);
+      if (openingTextAlpha <= 0) openingPhase = "idle";
+    }
+
+    // Track void screen position for text overlay
+    const voidEf2 = emergingFrags.find((f) => f.starId === "void-entry");
+    if (voidEf2) {
+      const vsp = spaceToScreen(voidEf2.x, voidEf2.y);
+      openingTextScreen = { x: vsp.x, y: vsp.y };
+    }
+
+    if (autoPanPhase === "panToVoid" && pendingWhisper) {
+      // Phase 1: pan to void entrance before launching whisper
+      const targetX = pendingWhisper.sx;
+      const targetY = pendingWhisper.sy;
+      const dist = Math.hypot(viewport.x - targetX, viewport.y - targetY);
+      const panLerp = isFirstOpening ? 0.04 : 0.08;
+      viewport.x += (targetX - viewport.x) * panLerp;
+      viewport.y += (targetY - viewport.y) * panLerp;
+      viewport.zoom += (0.65 - viewport.zoom) * panLerp;
+
+      // Opening text: keep screen position synced with void
+      if (isFirstOpening && pendingWhisper) {
+        const vsp = spaceToScreen(targetX, targetY);
+        openingTextScreen = { x: vsp.x, y: vsp.y };
+      }
+
+      // When close enough: hold briefly for first opening, launch directly otherwise
+      if (dist < 80 && Math.abs(viewport.zoom - 0.65) < 0.05) {
+        if (isFirstOpening) {
+          openingTextAlpha = 1;
+          settleTimer = 0.8; // brief hold before fissure
+          autoPanPhase = "settle";
+        } else {
+          launchPendingWhisper();
+        }
+      }
+    } else if (autoPanPhase === "followWhisper") {
+      // Phase 2: track the whisper as it flies
+      const w = whispers[activeWhisperIdx];
+      if (w && w.life > 0 && w.progress < 1) {
+        const t = easeInOutQuad(w.progress);
+        const wx = w.sx + (w.tx - w.sx) * t;
+        const wy = w.sy + (w.ty - w.sy) * t;
+        viewport.x += (wx - viewport.x) * 0.1;
+        viewport.y += (wy - viewport.y) * 0.1;
+        viewport.zoom += (0.75 - viewport.zoom) * 0.08;
+      } else {
+        // Whisper ended, settle briefly then release
+        autoPanPhase = "settle";
+        settleTimer = 0.6;
+      }
+    } else if (autoPanPhase === "settle") {
+      viewport.targetX = viewport.x;
+      viewport.targetY = viewport.y;
+      viewport.targetZoom = viewport.zoom;
+      settleTimer -= 1 / 60;
+      // Opening: fade text, trigger ignition, then launch whisper
+      if (isFirstOpening) {
+        if (settleTimer < 0.6) {
+          openingTextAlpha = Math.max(0, settleTimer / 0.6);
+        }
+        if (settleTimer < 0.5 && ignitionAge === 0) {
+          ignitionAge = 0.001;
+          ignitionShake = 18;
+          // Spawn burst particles
+          const voidEf = emergingFrags.find((f) => f.starId === "void-entry");
+          if (voidEf) {
+            const colors = [
+              { r: 220, g: 210, b: 255 },
+              { r: 180, g: 160, b: 240 },
+              { r: 255, g: 255, b: 255 },
+              { r: 160, g: 180, b: 255 },
+              { r: 200, g: 180, b: 240 },
+            ];
+            for (let i = 0; i < 30; i++) {
+              const angle = Math.random() * Math.PI * 2;
+              const speed = 400 + Math.random() * 900;
+              ignitionParticles.push({
+                x: voidEf.x,
+                y: voidEf.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 0.3 + Math.random() * 0.5,
+                maxLife: 0.3 + Math.random() * 0.5,
+                color: colors[Math.floor(Math.random() * colors.length)],
+              });
+            }
+          }
+        }
+        if (ignitionAge > 0 && ignitionAge < 5) {
+          ignitionAge += 1 / 60;
+        }
+        if (ignitionAge >= 5) {
+          launchPendingWhisper();
+          ignitionAge = 6;
+        }
+      } else {
+        if (settleTimer <= 0) {
+          autoPanPhase = "none";
+          activeWhisperIdx = -1;
+          driftTarget.x = viewport.x;
+          driftTarget.y = viewport.y;
+        }
+      }
+    } else {
+      viewport.x += (viewport.targetX - viewport.x) * lerp;
+      viewport.y += (viewport.targetY - viewport.y) * lerp;
+      viewport.zoom += (viewport.targetZoom - viewport.zoom) * lerp;
+    }
+
+    // Time-driven systems pause while content overlay is open
+    if (!paused) {
+      updateEmergence(time);
+
+      voidBreathTime += 1 / 60;
+      if (voidBreathTime > VOID_BREATH_PERIOD)
+        voidBreathTime -= VOID_BREATH_PERIOD;
+
+      // Spawn whisper: first on timer, subsequent on breath exhale
+      const breathPhase = voidBreathTime / VOID_BREATH_PERIOD;
+      const voidEf = emergingFrags.find((f) => f.starId === "void-entry");
+      whisperCooldown = Math.max(0, whisperCooldown - 1 / 60);
+
+      const shouldSpawnFirst =
+        firstWhisperTime < Infinity &&
+        time >= firstWhisperTime &&
+        emergeQueue.length === 16;
+      const shouldSpawnBreath =
+        breathPhase >= 0.4 &&
+        breathPhase < 0.42 &&
+        whisperCooldown <= 0 &&
+        emergeQueue.length > 0 &&
+        emergeQueue.length < 16 &&
+        !isFirstOpening;
+
+      if ((shouldSpawnFirst || shouldSpawnBreath) && voidEf) {
+        const target = emergeQueue[0];
+        if (target && !pendingWhisper) {
+          pendingWhisper = {
+            sx: voidEf.x,
+            sy: voidEf.y,
+            tx: target.x,
+            ty: target.y,
+            text: target.shortText,
+            color: target.color,
+          };
+          autoPanPhase = "panToVoid";
+          whisperCooldown = 4;
+          if (shouldSpawnFirst) {
+            firstWhisperTime = Infinity;
+            isFirstOpening = true;
+            const vsp = spaceToScreen(voidEf.x, voidEf.y);
+            openingTextScreen = { x: vsp.x, y: vsp.y };
+          }
+        }
+      }
+
+      // Update whispers + trigger star emergence on arrival
+      for (const w of whispers) {
+        w.progress += 1 / 60 / WHISPER_DURATION;
+        w.life -= 1 / 60;
+        // Whisper arrives: wake the target star
+        if (w.progress >= 0.9 && w.progress - 1 / 60 / WHISPER_DURATION < 0.9) {
+          // Find nearest hidden fragment star to the target position
+          let best: EmergingFrag | null = null;
+          let bestDist = Infinity;
+          for (const ef of emergingFrags) {
+            if (ef.phase !== "hidden" || ef.starId === "void-entry") continue;
+            const d = Math.hypot(ef.x - w.tx, ef.y - w.ty);
+            if (d < bestDist) {
+              bestDist = d;
+              best = ef;
+            }
+          }
+          if (best) {
+            best.phase = "emerging";
+            best.phaseStart = time;
+            emergeQueue = emergeQueue.filter((f) => f.starId !== best!.starId);
+          }
+        }
+      }
+      whispers = whispers.filter((w) => w.life > 0 && w.progress < 1);
+    } // end paused guard
+
+    // Update resonances
+    resonances = resonances.filter(
+      (r) => time - (r.startTime + r.delay) < r.duration,
+    );
+
+    // Update proximity + text alpha for emerging stars
     for (const ef of emergingFrags) {
       const sp = spaceToScreen(ef.x, ef.y);
       ef.screenX = sp.x;
       ef.screenY = sp.y;
-
-      // Proximity: 1 when cursor is within 40px, decaying to 0 at 220px
       const screenDist = Math.hypot(mouseScreenX - sp.x, mouseScreenY - sp.y);
       ef.proximity = Math.max(0, 1 - (screenDist - 40) / 180);
 
-      if (ef.phase === "hidden" || ef.phase === "star") {
+      // Text alpha for emerging/lingering stars
+      if (
+        ef.phase === "emerging" ||
+        ef.phase === "lingering" ||
+        ef.phase === "crystallizing"
+      ) {
+        const elapsed = time - ef.phaseStart;
+        let alpha = 0;
+        if (ef.phase === "emerging") {
+          alpha = Math.min(1, elapsed / EMERGE_DURATION);
+          alpha = 1 - Math.pow(1 - alpha, 2);
+        } else if (ef.phase === "lingering") {
+          alpha = 1;
+        } else if (ef.phase === "crystallizing") {
+          const t = Math.min(1, elapsed / CRYSTALLIZE_DURATION);
+          alpha = t < 0.45 ? 1 : 1 - Math.pow((t - 0.45) / 0.55, 2);
+        }
+        ef.textAlpha = alpha;
+      } else {
         ef.textAlpha = 0;
-        ef.emergeBlur = 0;
-        ef.emergeBrightness = 1;
-        continue;
       }
-      if (!ef.shortText) {
-        ef.textAlpha = 0;
-        ef.emergeBlur = 0;
-        ef.emergeBrightness = 1;
-        continue;
-      }
-      const elapsed = time - ef.phaseStart;
-      let alpha = 0;
-      let blurPx = 0;
-      let brightness = 1;
-
-      if (ef.phase === "emerging") {
-        alpha = Math.min(1, elapsed / EMERGE_DURATION);
-        alpha = 1 - Math.pow(1 - alpha, 2);
-        // Blur: starts at 10px, sharpens to 0
-        blurPx = (1 - alpha) * 10;
-        // Brightness: overshoots mid-phase, settles to 1
-        brightness = 1 + Math.sin(alpha * Math.PI) * 0.4;
-      } else if (ef.phase === "lingering") {
-        alpha = 1;
-        blurPx = 0;
-        // Subtle brightness breathing
-        brightness = 1 + Math.sin(time * 1.2 + ef.id.charCodeAt(2)) * 0.06;
-      } else if (ef.phase === "crystallizing") {
-        const t = Math.min(1, elapsed / CRYSTALLIZE_DURATION);
-        alpha = t < 0.45 ? 1 : 1 - Math.pow((t - 0.45) / 0.55, 2);
-        // Blur returns as text dissolves
-        blurPx = (1 - alpha) * 8;
-        brightness = alpha;
-      }
-
-      ef.textAlpha = alpha;
-      ef.emergeBlur = blurPx;
-      ef.emergeBrightness = brightness;
     }
 
     // Gentle gravity drift toward interest point when not dragging
-    if (!isDragging && !autoPanTarget) {
+    if (!isDragging) {
       const driftForce = 0.003;
       viewport.targetX += (driftTarget.x - viewport.targetX) * driftForce;
       viewport.targetY += (driftTarget.y - viewport.targetY) * driftForce;
@@ -995,30 +1284,88 @@
       lastChunkUpdateY = viewport.y;
     }
 
+    // Ignition: update particles + shake
+    for (const p of ignitionParticles) {
+      p.x += p.vx / 60;
+      p.y += p.vy / 60;
+      p.life -= 1 / 60;
+    }
+    ignitionParticles = ignitionParticles.filter((p) => p.life > 0);
+    ignitionShake = Math.max(0, ignitionShake - (1 / 60) * 40);
+    const shakeX = Math.sin(time * 55) * ignitionShake;
+    const shakeY = Math.cos(time * 48) * ignitionShake;
+
     // Draw world-space
     ctx.save();
     const cx = w / 2,
       cy = h / 2;
     ctx.translate(cx, cy);
     ctx.scale(viewport.zoom, viewport.zoom);
-    ctx.translate(-viewport.x, -viewport.y);
+    ctx.translate(-viewport.x - shakeX, -viewport.y - shakeY);
 
-    // Shooting star spawning
-    if (time > nextShootingStarTime) {
+    // Shooting stars: activate after explosion
+    if (nextShootingStarTime === Infinity && ignitionAge >= 0.3) {
+      nextShootingStarTime = time + 3;
+    }
+    if (time > nextShootingStarTime && ignitionAge >= 0.3) {
       spawnShootingStar();
       nextShootingStarTime = time + 12 + Math.random() * 18;
     }
     updateShootingStars();
 
-    drawNebulas(time);
-    drawMilkyWay();
+    // Revelation pulse: fades over ~3s when all 16 stars read
+    if (revelationPulse > 0)
+      revelationPulse = Math.max(0, revelationPulse - 1 / 180);
+    // Field brightness follows narrative arc
+    const fieldBrightness =
+      ignitionAge <= 0
+        ? 0.45
+        : ignitionAge < 5
+          ? 0.45 + (ignitionAge / 5) * 0.55
+          : 1.0 + Math.min(readCount / 16, 1) * 0.1 + revelationPulse * 0.5;
+
+    drawNebulas(ctx, time, fieldBrightness, nebulas, viewport, canvas);
+    drawMilkyWay(ctx, fieldBrightness, viewport, canvas);
     drawDusts(time);
-    drawBgStars(time);
+    const rawAwaken = Math.max(0, Math.min(1, (time - bootTime - 3.5) / 5));
+    const awakenProgress = 1 - (1 - rawAwaken) * (1 - rawAwaken);
+    drawBgStars(
+      ctx,
+      time,
+      fieldBrightness,
+      ignitionAge,
+      awakenProgress,
+      revelationPulse,
+      emergingFrags,
+      activeChunks,
+      chunkCache,
+      viewport,
+      canvas,
+    );
     drawShootingStars(time);
     drawConnectionLines(time);
     drawEDots(time);
     drawFragmentStars(time);
-    drawVoidEntrance(time);
+    drawIgnition(
+      ctx,
+      emergingFrags,
+      ignitionAge,
+      ignitionParticles,
+      viewport,
+      canvas,
+    );
+    drawVoidGate(
+      ctx,
+      emergingFrags,
+      ignitionAge,
+      time,
+      mouseSpaceX,
+      mouseSpaceY,
+      viewport,
+      canvas,
+      readCount,
+    );
+    drawWhispers(time);
 
     // Click ripple
     if (rippleAge < RIPPLE_DURATION) {
@@ -1043,7 +1390,7 @@
   //  Drawing functions (world-space)
   // ══════════════════════════════════════════
 
-  function drawNebulas(time: number) {
+  function _oldNebulas(time: number, fieldBrightness: number) {
     for (const n of nebulas) {
       const dx = Math.sin(time * n.speed * 0.6 + n.phase) * 30;
       const dy = Math.cos(time * n.speed * 0.4 + n.phase) * 20;
@@ -1056,15 +1403,15 @@
       const g = ctx!.createRadialGradient(pcx, pcy, 0, pcx, pcy, n.radius);
       g.addColorStop(
         0,
-        `rgba(${n.color.r},${n.color.g},${n.color.b},${n.opacity * pulse})`,
+        `rgba(${n.color.r},${n.color.g},${n.color.b},${n.opacity * pulse * fieldBrightness})`,
       );
       g.addColorStop(
         0.35,
-        `rgba(${n.color.r},${n.color.g},${n.color.b},${n.opacity * pulse * 0.5})`,
+        `rgba(${n.color.r},${n.color.g},${n.color.b},${n.opacity * pulse * 0.5 * fieldBrightness})`,
       );
       g.addColorStop(
         0.7,
-        `rgba(${n.color.r},${n.color.g},${n.color.b},${n.opacity * pulse * 0.12})`,
+        `rgba(${n.color.r},${n.color.g},${n.color.b},${n.opacity * pulse * 0.12 * fieldBrightness})`,
       );
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx!.fillStyle = g;
@@ -1109,7 +1456,17 @@
     }
   }
 
-  function drawBgStars(time: number) {
+  function _oldBgStars(
+    time: number,
+    fieldBrightness: number,
+    ignitionAge: number,
+  ) {
+    // Void position for proximity boost during ignition
+    const voidEf = emergingFrags.find((f) => f.starId === "void-entry");
+    const vx = voidEf?.x ?? 0;
+    const vy = voidEf?.y ?? 0;
+    const voidDist = Math.hypot(vx, vy);
+
     for (const key of activeChunks) {
       const c = chunkCache.get(key);
       if (!c) continue;
@@ -1117,7 +1474,51 @@
         const twinkle = Math.sin(time * s.twinkleSpeed + s.twinklePhase);
         const twinkleRange =
           s.type === "dust" ? 0.15 : s.type === "beacon" ? 0.35 : 0.3;
-        const a = s.opacity * (1 - twinkleRange + twinkle * twinkleRange);
+        let a =
+          s.opacity *
+          (1 - twinkleRange + twinkle * twinkleRange) *
+          fieldBrightness;
+
+        // Fissure: sharp radial brightening as void cracks open
+        if (ignitionAge > 0 && ignitionAge < 0.3) {
+          const sd = Math.hypot(s.wx - vx, s.wy - vy);
+          if (sd < 600) {
+            const fissureBoost = (1 - sd / 600) * 0.6 * (ignitionAge / 0.3);
+            a += fissureBoost * s.opacity;
+          }
+        }
+        // Explosion proximity: stars near void brighten
+        if (ignitionAge >= 0.3 && ignitionAge < 1.5) {
+          const sd = Math.hypot(s.wx - vx, s.wy - vy);
+          if (sd < 500) {
+            const boost =
+              (1 - sd / 500) * 0.4 * Math.sin((ignitionAge * Math.PI) / 1.5);
+            a += boost * s.opacity;
+          }
+        }
+        // Afterglow: subtle residual glow after ignition fades
+        if (ignitionAge >= 5 && ignitionAge < 10) {
+          const sd = Math.hypot(s.wx - vx, s.wy - vy);
+          if (sd < 300) {
+            const afterA = (1 - (ignitionAge - 5) / 5) * 0.15 * (1 - sd / 300);
+            a += afterA * s.opacity;
+          }
+        }
+
+        // Wave-front boost: stars near shockwave front
+        if (ignitionAge > 0 && ignitionAge < 5) {
+          const sd = Math.hypot(s.wx - vx, s.wy - vy);
+          const waveSpeed =
+            Math.max(canvas.width, canvas.height) / viewport.zoom / 5;
+          for (let ri = 0; ri < 5; ri++) {
+            const ringR = (ignitionAge - 0.05 - ri * 0.15) * waveSpeed;
+            if (ringR < 0) continue;
+            if (Math.abs(sd - ringR) < 60) {
+              a += 0.15 * s.opacity * (1 - Math.abs(sd - ringR) / 60);
+            }
+          }
+        }
+
         const col = starColor(s.temp);
 
         if (s.type === "dust") {
@@ -1386,7 +1787,7 @@
   }
 
   // ── Milky Way band ──
-  function drawMilkyWay() {
+  function _oldMilkyWay(fieldBrightness: number) {
     // Faint glow along the diagonal y = 0.5x
     const hw = canvas.width / viewport.zoom / 2;
     const hh = canvas.height / viewport.zoom / 2;
@@ -1399,9 +1800,9 @@
       const cx = minX + (maxX - minX) * (i / 5);
       const cy = 0.5 * cx;
       const g = ctx!.createRadialGradient(cx, cy, 100, cx, cy, 700);
-      g.addColorStop(0, "rgba(139,92,246,0.015)");
-      g.addColorStop(0.3, "rgba(59,130,246,0.008)");
-      g.addColorStop(0.6, "rgba(180,130,255,0.004)");
+      g.addColorStop(0, `rgba(139,92,246,${0.015 * fieldBrightness})`);
+      g.addColorStop(0.3, `rgba(59,130,246,${0.008 * fieldBrightness})`);
+      g.addColorStop(0.6, `rgba(180,130,255,${0.004 * fieldBrightness})`);
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx!.fillStyle = g;
       ctx!.fillRect(cx - 700, cy - 700, 1400, 1400);
@@ -1508,7 +1909,17 @@
           : 0;
       const eff = bright + twinkle;
       const proxBoost = 1 + ef.proximity * 0.5;
-      const cs = ef.size * breath * crystalScale;
+      // Resonance boost
+      let resBoost = 1;
+      for (const r of resonances) {
+        if (r.starId !== ef.starId) continue;
+        const resElapsed = time - (r.startTime + r.delay);
+        if (resElapsed < 0 || resElapsed > r.duration) continue;
+        const resT = resElapsed / r.duration;
+        // Quick swell, slow decay
+        resBoost = 1 + (1 - resT) * Math.sin(resT * Math.PI) * 0.6;
+      }
+      const cs = ef.size * breath * crystalScale * (1 + (resBoost - 1) * 0.3);
 
       if (crystalScale < 0.01) continue;
 
@@ -1594,7 +2005,7 @@
       if (!ef.read && ef.phase === "star") {
         ctx!.beginPath();
         ctx!.arc(ef.x, ef.y, mR + 3, 0, Math.PI * 2);
-        ctx!.strokeStyle = `rgba(255,216,150,${0.4 + unreadPulse * 0.25})`;
+        ctx!.strokeStyle = `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${0.45 + unreadPulse * 0.25})`;
         ctx!.lineWidth = 2;
         ctx!.stroke();
       }
@@ -1613,100 +2024,162 @@
     }
   }
 
-  function drawVoidEntrance(time: number) {
-    const ef = emergingFrags.find((f) => f.starId === "void-entry");
-    if (!ef || ef.phase === "hidden") return;
+  function _old_voidEntrance(_time: number) {
+    return;
+  }
+  // ── Whisper rendering ──
+  function drawWhispers(time: number) {
+    for (const w of whispers) {
+      const t = easeInOutQuad(w.progress);
+      const wx = w.sx + (w.tx - w.sx) * t;
+      const wy = w.sy + (w.ty - w.sy) * t;
 
-    const breathCycle = Math.sin(time * 0.25) * 0.5 + 0.5;
-    const breathA = voidRevealed
-      ? 0.5 + breathCycle * 0.4
-      : 0.25 + breathCycle * 0.1;
-    const scale = voidRevealed ? 1 + breathCycle * 0.3 : 1;
-    const cs = ef.size * scale,
-      rR = cs * 8 * scale;
+      // Alpha: fast fade-in, sustain, fade-out near end
+      const alpha =
+        w.progress < 0.08
+          ? w.progress / 0.08
+          : w.progress > 0.85
+            ? (1 - w.progress) / 0.15
+            : 1;
+      const a = alpha * 0.85;
 
-    if (voidRevealed) {
-      for (let ring = 0; ring < 3; ring++) {
-        const rp = (time * 0.4 + ring * 2) % (Math.PI * 2);
-        const ra = breathA * 0.15 * (0.5 + 0.5 * Math.sin(rp));
-        const rr = rR + Math.sin(rp) * 15;
+      const angle = Math.atan2(w.ty - w.sy, w.tx - w.sx);
+
+      // Long sweeping trail
+      const trailLen = 160;
+      const tx1 = wx - Math.cos(angle) * trailLen;
+      const ty1 = wy - Math.sin(angle) * trailLen;
+      const trailGrad = ctx!.createLinearGradient(wx, wy, tx1, ty1);
+      trailGrad.addColorStop(0, `rgba(255,255,255,${a})`);
+      trailGrad.addColorStop(
+        0.15,
+        `rgba(${w.color.r},${w.color.g},${w.color.b},${a * 0.7})`,
+      );
+      trailGrad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx!.beginPath();
+      ctx!.moveTo(wx, wy);
+      ctx!.lineTo(tx1, ty1);
+      ctx!.strokeStyle = trailGrad;
+      ctx!.lineWidth = 3;
+      ctx!.stroke();
+
+      // Bright core at head
+      const coreR = 30;
+      const pg = ctx!.createRadialGradient(wx, wy, 0, wx, wy, coreR);
+      pg.addColorStop(0, `rgba(255,255,255,${a})`);
+      pg.addColorStop(
+        0.2,
+        `rgba(${w.color.r},${w.color.g},${w.color.b},${a * 0.6})`,
+      );
+      pg.addColorStop(
+        0.6,
+        `rgba(${w.color.r},${w.color.g},${w.color.b},${a * 0.1})`,
+      );
+      pg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx!.beginPath();
+      ctx!.arc(wx, wy, coreR, 0, Math.PI * 2);
+      ctx!.fillStyle = pg;
+      ctx!.fill();
+
+      // Spark particles along trail
+      for (let i = 0; i < 4; i++) {
+        const sparkDist = (i + 1) * 0.2 * trailLen;
+        const sx = wx - Math.cos(angle) * sparkDist;
+        const sy = wy - Math.sin(angle) * sparkDist;
+        const sparkR = 1.5 + Math.random();
+        const sparkA = a * (0.3 + Math.random() * 0.3);
         ctx!.beginPath();
-        ctx!.arc(ef.x, ef.y, rr, 0, Math.PI * 2);
-        ctx!.strokeStyle = `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${ra})`;
-        ctx!.lineWidth = 1;
-        ctx!.stroke();
-      }
-    }
-
-    const og = ctx!.createRadialGradient(ef.x, ef.y, cs, ef.x, ef.y, rR * 1.5);
-    og.addColorStop(
-      0,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${breathA * 0.2})`,
-    );
-    og.addColorStop(
-      0.5,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${breathA * 0.05})`,
-    );
-    og.addColorStop(1, "rgba(0,0,0,0)");
-    ctx!.beginPath();
-    ctx!.arc(ef.x, ef.y, rR * 1.5, 0, Math.PI * 2);
-    ctx!.fillStyle = og;
-    ctx!.fill();
-
-    const mg = ctx!.createRadialGradient(
-      ef.x,
-      ef.y,
-      cs * 0.5,
-      ef.x,
-      ef.y,
-      cs * 4,
-    );
-    mg.addColorStop(
-      0,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${breathA * 0.5})`,
-    );
-    mg.addColorStop(
-      0.5,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${breathA * 0.12})`,
-    );
-    mg.addColorStop(1, "rgba(0,0,0,0)");
-    ctx!.beginPath();
-    ctx!.arc(ef.x, ef.y, cs * 4, 0, Math.PI * 2);
-    ctx!.fillStyle = mg;
-    ctx!.fill();
-
-    ctx!.beginPath();
-    ctx!.arc(ef.x, ef.y, cs, 0, Math.PI * 2);
-    ctx!.fillStyle = `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${breathA})`;
-    ctx!.fill();
-
-    ctx!.beginPath();
-    ctx!.arc(ef.x, ef.y, cs * 0.3, 0, Math.PI * 2);
-    ctx!.fillStyle = `rgba(200,210,255,${breathA + 0.15})`;
-    ctx!.fill();
-
-    if (voidRevealed) {
-      const dist = Math.hypot(mouseSpaceX - ef.x, mouseSpaceY - ef.y);
-      const prox = Math.max(0, 1 - dist / 350);
-      if (prox > 0) {
-        const pg = ctx!.createRadialGradient(
-          ef.x,
-          ef.y,
-          cs,
-          ef.x,
-          ef.y,
-          rR * 2,
-        );
-        pg.addColorStop(
-          0,
-          `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${prox * 0.08})`,
-        );
-        pg.addColorStop(1, "rgba(0,0,0,0)");
-        ctx!.beginPath();
-        ctx!.arc(ef.x, ef.y, rR * 2, 0, Math.PI * 2);
-        ctx!.fillStyle = pg;
+        ctx!.arc(sx, sy, sparkR, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(255,255,255,${sparkA})`;
         ctx!.fill();
       }
+    }
+  }
+
+  function easeInOutQuad(t: number): number {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  }
+
+  // ── Cosmic ignition — now in void-gate.ts ──
+  function _old_ignition(time: number) {
+    if (ignitionAge <= 0 || ignitionAge > 5) return;
+    const ef = emergingFrags.find((f) => f.starId === "void-entry");
+    if (!ef) return;
+    const cx = ef.x,
+      cy = ef.y;
+    const t = ignitionAge;
+    const maxDim = Math.max(canvas.width, canvas.height) / viewport.zoom;
+
+    // Center flash
+    if (t < 0.2) {
+      const flashA = (1 - t / 0.2) * 0.9;
+      const flashR = maxDim * 0.8;
+      const fg = ctx!.createRadialGradient(cx, cy, 0, cx, cy, flashR);
+      fg.addColorStop(0, `rgba(255,255,255,${flashA})`);
+      fg.addColorStop(0.04, `rgba(220,210,255,${flashA * 0.5})`);
+      fg.addColorStop(0.15, `rgba(140,120,220,${flashA * 0.12})`);
+      fg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx!.fillStyle = fg;
+      ctx!.fillRect(cx - flashR, cy - flashR, flashR * 2, flashR * 2);
+    }
+
+    // Glow-stroke shockwave rings with shadowBlur + additive blend
+    const waveSpeed = maxDim / 5;
+    const RING_COUNT = 5;
+    ctx!.save();
+    ctx!.globalCompositeOperation = "lighter";
+    for (let i = 0; i < RING_COUNT; i++) {
+      const startT = 0.05 + i * 0.15;
+      const ringLife = 4;
+      if (t < startT || t > startT + ringLife) continue;
+      const age = t - startT;
+      const ringR = age * waveSpeed;
+      const intensity =
+        age < 0.3 ? age / 0.3 : 1 - (age - 0.3) / (ringLife - 0.3);
+      const a = intensity * 0.75;
+
+      // Outer glow — wide, diffuse
+      ctx!.beginPath();
+      ctx!.arc(cx, cy, ringR, 0, Math.PI * 2);
+      ctx!.strokeStyle = `rgba(140,120,210,${a * 0.45})`;
+      ctx!.lineWidth = 18;
+      ctx!.shadowColor = `rgba(150,130,220,${a * 0.5})`;
+      ctx!.shadowBlur = 45;
+      ctx!.stroke();
+
+      // Mid ring — luminous color
+      ctx!.beginPath();
+      ctx!.arc(cx, cy, ringR, 0, Math.PI * 2);
+      ctx!.strokeStyle = `rgba(210,190,245,${a * 0.75})`;
+      ctx!.lineWidth = 4;
+      ctx!.shadowColor = `rgba(190,170,240,${a * 0.6})`;
+      ctx!.shadowBlur = 20;
+      ctx!.stroke();
+
+      // Core wavefront — sharp white
+      ctx!.beginPath();
+      ctx!.arc(cx, cy, ringR, 0, Math.PI * 2);
+      ctx!.strokeStyle = `rgba(255,255,255,${a})`;
+      ctx!.lineWidth = 1.5;
+      ctx!.shadowBlur = 0;
+      ctx!.stroke();
+    }
+    ctx!.restore();
+
+    // Particles
+    for (const p of ignitionParticles) {
+      const alpha = Math.max(0, p.life / p.maxLife);
+      const pg = ctx!.createRadialGradient(p.x, p.y, 0, p.x, p.y, 8);
+      pg.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      pg.addColorStop(
+        0.5,
+        `rgba(${p.color.r},${p.color.g},${p.color.b},${alpha * 0.5})`,
+      );
+      pg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx!.beginPath();
+      ctx!.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx!.fillStyle = pg;
+      ctx!.fill();
     }
   }
 
@@ -1733,6 +2206,22 @@
   class="fixed inset-0 w-full h-full living-space-canvas"
 />
 
+{#if openingPhase !== "idle"}
+  <div
+    class="opening-text"
+    style="
+      left: {openingTextScreen.x}px;
+      top: {openingTextScreen.y - 60}px;
+      opacity: {openingTextAlpha};
+    "
+  >
+    {OPENING_TEXT.slice(0, openingRevealIdx)}
+    {#if openingPhase === "typing"}
+      <span class="cursor-blink">|</span>
+    {/if}
+  </div>
+{/if}
+
 {#if emergingFrags.some((ef) => ef.textAlpha > 0.01)}
   <div class="emerging-texts-layer">
     {#each emergingFrags as ef}
@@ -1743,8 +2232,6 @@
             left: {ef.screenX}px;
             top: {ef.screenY - ef.size * 14 * viewport.zoom}px;
             opacity: {ef.textAlpha};
-            --emerge-blur: {ef.emergeBlur}px;
-            --emerge-brightness: {ef.emergeBrightness};
             --glow-color: rgb({ef.color.r},{ef.color.g},{ef.color.b});
           "
         >
@@ -1773,6 +2260,33 @@
     overflow: hidden;
   }
 
+  .opening-text {
+    position: fixed;
+    z-index: 2;
+    transform: translate(-50%, -100%);
+    font-family: "LXGW WenKai", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: calc(0.7vw + 15px);
+    font-weight: 100;
+    letter-spacing: 0.15em;
+    text-align: center;
+    color: rgba(200, 210, 255, 0.85);
+    text-shadow:
+      0 0 20px rgba(180, 200, 255, 0.6),
+      0 0 50px rgba(160, 180, 255, 0.3);
+    pointer-events: none;
+  }
+
+  .cursor-blink {
+    animation: cursorBlink 0.6s step-end infinite;
+    color: rgba(220, 210, 255, 0.8);
+  }
+
+  @keyframes cursorBlink {
+    50% {
+      opacity: 0;
+    }
+  }
+
   .emerge-text {
     position: absolute;
     transform: translate(-50%, -100%);
@@ -1780,15 +2294,11 @@
     font-size: calc(0.6vw + 13px);
     font-weight: 300;
     text-align: center;
-    max-width: 55vw;
-    line-height: 1.7;
+    white-space: nowrap;
     letter-spacing: 0.01em;
     color: var(--glow-color);
     text-shadow:
-      0 0 18px var(--glow-color),
-      0 0 36px var(--glow-color);
-    filter: blur(var(--emerge-blur, 0px))
-      brightness(var(--emerge-brightness, 1));
-    will-change: filter, opacity;
+      0 0 12px var(--glow-color),
+      0 0 28px var(--glow-color);
   }
 </style>

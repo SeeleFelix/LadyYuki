@@ -63,6 +63,7 @@
   <LivingSpace
     bind:this={livingSpaceRef}
     locale={currentLocale}
+    paused={!!(selectedStar && selectedFragment)}
     onstarclick={handleStarClick}
     onentervoid={handleEnterVoid}
   />
