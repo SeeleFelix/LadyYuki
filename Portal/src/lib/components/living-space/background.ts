@@ -418,3 +418,234 @@ export function drawMilkyWay(
     ctx.fillRect(cx - 700, cy - 700, 1400, 1400);
   }
 }
+
+const METEOR_COLORS: Record<string, { r: number; g: number; b: number }> = {
+  swift: { r: 255, g: 255, b: 255 },
+  fireball: { r: 255, g: 220, b: 155 },
+  longtrail: { r: 200, g: 220, b: 255 },
+};
+
+export function spawnShootingStar(
+  shootingStars: ShootingStar[],
+  viewport: { x: number; y: number; zoom: number },
+  canvas: HTMLCanvasElement,
+): void {
+  const hw = canvas.width / viewport.zoom / 2;
+  const hh = canvas.height / viewport.zoom / 2;
+  const burst = Math.random() < 0.2;
+  const count = burst ? 2 + Math.floor(Math.random() * 2) : 1;
+  for (let n = 0; n < count; n++) {
+    const typeRand = Math.random();
+    const type = (
+      typeRand < 0.3 ? "swift" : typeRand < 0.6 ? "fireball" : "longtrail"
+    ) as ShootingStar["type"];
+    const col = METEOR_COLORS[type];
+    const screenSpeed =
+      type === "swift"
+        ? 200 + Math.random() * 200
+        : type === "fireball"
+          ? 100 + Math.random() * 150
+          : 60 + Math.random() * 100;
+    const speed = screenSpeed / viewport.zoom;
+    const angle = (Math.random() - 0.5) * Math.PI * 0.7;
+    let sx: number, sy: number;
+    if (Math.random() < 0.5) {
+      const edge = Math.floor(Math.random() * 4);
+      switch (edge) {
+        case 0:
+          sx = viewport.x - hw;
+          sy = viewport.y - hh + Math.random() * hh * 2;
+          break;
+        case 1:
+          sx = viewport.x + hw;
+          sy = viewport.y - hh + Math.random() * hh * 2;
+          break;
+        case 2:
+          sx = viewport.x - hw + Math.random() * hw * 2;
+          sy = viewport.y - hh;
+          break;
+        default:
+          sx = viewport.x - hw + Math.random() * hw * 2;
+          sy = viewport.y + hh;
+          break;
+      }
+    } else {
+      sx = viewport.x - hw * 0.7 + Math.random() * hw * 1.4;
+      sy = viewport.y - hh * 0.7 + Math.random() * hh * 1.4;
+    }
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    const maxLife =
+      type === "swift"
+        ? 1.5 + Math.random() * 2
+        : type === "fireball"
+          ? 3 + Math.random() * 3
+          : 4 + Math.random() * 4;
+    const delay = n * (0.6 + Math.random() * 1.2);
+    shootingStars.push({
+      x: sx - vx * delay,
+      y: sy - vy * delay,
+      vx,
+      vy,
+      life: 0,
+      maxLife,
+      alpha: 0,
+      type,
+      color: col,
+      trail: [],
+      sparks: [],
+    });
+  }
+}
+
+export function updateShootingStars(shootingStars: ShootingStar[]): void {
+  const dt = 1 / 60;
+  for (let i = shootingStars.length - 1; i >= 0; i--) {
+    const ss = shootingStars[i];
+    ss.x += ss.vx * dt;
+    ss.y += ss.vy * dt;
+    ss.life += dt;
+    const lr = ss.life / ss.maxLife;
+    ss.alpha = lr < 0.12 ? lr / 0.12 : lr > 0.65 ? 1 - (lr - 0.65) / 0.35 : 1;
+    ss.trail.push({ x: ss.x, y: ss.y });
+    if (ss.trail.length > 50) ss.trail.shift();
+    if (Math.random() < 0.5) {
+      const a = Math.random() * Math.PI * 2;
+      const spd = 20 + Math.random() * 60;
+      ss.sparks.push({
+        x: ss.x,
+        y: ss.y,
+        vx: Math.cos(a) * spd,
+        vy: Math.sin(a) * spd,
+        life: 0,
+        maxLife: 0.3 + Math.random() * 0.5,
+      });
+    }
+    for (let j = ss.sparks.length - 1; j >= 0; j--) {
+      const sp = ss.sparks[j];
+      sp.x += sp.vx * dt;
+      sp.y += sp.vy * dt;
+      sp.life += dt;
+      if (sp.life >= sp.maxLife) ss.sparks.splice(j, 1);
+    }
+    if (ss.life >= ss.maxLife) shootingStars.splice(i, 1);
+  }
+}
+
+export function drawShootingStars(
+  ctx: CanvasRenderingContext2D,
+  shootingStars: ShootingStar[],
+): void {
+  for (const ss of shootingStars) {
+    if (ss.alpha < 0.02 || ss.trail.length < 2) continue;
+    const col = ss.color;
+    const headR =
+      ss.type === "fireball" ? 18 : ss.type === "longtrail" ? 10 : 8;
+    const trail = ss.trail;
+    ctx.beginPath();
+    ctx.moveTo(trail[0].x, trail[0].y);
+    for (let t = 1; t < trail.length; t++) ctx.lineTo(trail[t].x, trail[t].y);
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},${ss.alpha * 0.15})`;
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    for (let t = 1; t < trail.length; t++) {
+      const seg = (t / trail.length) * ss.alpha * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(trail[t - 1].x, trail[t - 1].y);
+      ctx.lineTo(trail[t].x, trail[t].y);
+      ctx.strokeStyle = `rgba(255,255,255,${seg})`;
+      ctx.lineWidth = ss.type === "fireball" ? 2.5 : 1.8;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    for (const sp of ss.sparks) {
+      const slr = sp.life / sp.maxLife;
+      const sa = (1 - slr) * ss.alpha * 0.6;
+      if (sa < 0.02) continue;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${sa})`;
+      ctx.fill();
+    }
+    const hg = ctx.createRadialGradient(ss.x, ss.y, 0, ss.x, ss.y, headR);
+    hg.addColorStop(0, `rgba(255,255,255,${ss.alpha})`);
+    hg.addColorStop(0.3, `rgba(${col.r},${col.g},${col.b},${ss.alpha * 0.5})`);
+    hg.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.beginPath();
+    ctx.arc(ss.x, ss.y, headR, 0, Math.PI * 2);
+    ctx.fillStyle = hg;
+    ctx.fill();
+  }
+}
+
+export function drawDusts(
+  ctx: CanvasRenderingContext2D,
+  time: number,
+  activeChunks: string[],
+  chunkCache: Map<string, Chunk>,
+  CHUNK_SIZE: number,
+): void {
+  for (const key of activeChunks) {
+    const c = chunkCache.get(key);
+    if (!c) continue;
+    for (let i = 0; i < c.dusts.length; i++) {
+      const p = c.dusts[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life++;
+      const lr = p.life / p.maxLife;
+      const a =
+        p.alpha * Math.sin(lr * Math.PI) * (0.6 + 0.4 * Math.sin(time + i));
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      const pc = p.color ?? { r: 139, g: 92, b: 246 };
+      ctx.fillStyle = `rgba(${pc.r},${pc.g},${pc.b},${a})`;
+      ctx.fill();
+      if (p.life >= p.maxLife) {
+        const cx = Math.floor(p.x / CHUNK_SIZE);
+        const cy = Math.floor(p.y / CHUNK_SIZE);
+        const ox = cx * CHUNK_SIZE;
+        const oy = cy * CHUNK_SIZE;
+        p.x = ox + Math.random() * CHUNK_SIZE;
+        p.y = oy + Math.random() * CHUNK_SIZE;
+        p.life = 0;
+        p.maxLife = 200 + Math.floor(Math.random() * 300);
+      }
+    }
+  }
+}
+
+export function updateActiveChunks(
+  canvas: HTMLCanvasElement,
+  viewport: { x: number; y: number; zoom: number },
+  CHUNK_SIZE: number,
+  chunkCache: Map<string, Chunk>,
+  activeChunks: string[],
+): string[] {
+  const halfW = canvas.width / viewport.zoom / 2;
+  const halfH = canvas.height / viewport.zoom / 2;
+  const minX = viewport.x - halfW - CHUNK_SIZE;
+  const maxX = viewport.x + halfW + CHUNK_SIZE;
+  const minY = viewport.y - halfH - CHUNK_SIZE;
+  const maxY = viewport.y + halfH + CHUNK_SIZE;
+  const minCX = Math.floor(minX / CHUNK_SIZE);
+  const maxCX = Math.floor(maxX / CHUNK_SIZE);
+  const minCY = Math.floor(minY / CHUNK_SIZE);
+  const maxCY = Math.floor(maxY / CHUNK_SIZE);
+  const result: string[] = [];
+  for (let cx = minCX; cx <= maxCX; cx++) {
+    for (let cy = minCY; cy <= maxCY; cy++) {
+      getOrCreateChunk(cx, cy, chunkCache);
+      result.push(chunkKey(cx, cy));
+    }
+  }
+  if (chunkCache.size > 200) {
+    const activeSet = new Set(result);
+    for (const key of chunkCache.keys()) {
+      if (!activeSet.has(key)) chunkCache.delete(key);
+    }
+  }
+  return result;
+}
