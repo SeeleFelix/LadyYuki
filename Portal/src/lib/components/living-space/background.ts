@@ -141,6 +141,40 @@ export function getOrCreateChunk(
 //  Drawing functions
 // ══════════════════════════════════════
 
+function drawCrossFlare(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  alpha: number,
+  time: number,
+  color: { r: number; g: number; b: number },
+) {
+  const len = size * 12;
+  const flareAlpha = alpha * 0.35 * (0.7 + 0.3 * Math.sin(time * 1.5));
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  for (const angle of [0, Math.PI / 2]) {
+    ctx.beginPath();
+    ctx.moveTo(-len * Math.cos(angle), -len * Math.sin(angle));
+    ctx.lineTo(len * Math.cos(angle), len * Math.sin(angle));
+    ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},${flareAlpha})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-len * 0.6 * Math.cos(angle), -len * 0.6 * Math.sin(angle));
+    ctx.lineTo(len * 0.6 * Math.cos(angle), len * 0.6 * Math.sin(angle));
+    ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},${flareAlpha * 0.4})`;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 export function drawBgStars(
   ctx: CanvasRenderingContext2D,
   time: number,
@@ -313,15 +347,8 @@ export function drawBgStars(
         ctx.arc(s.wx, s.wy, cs, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
-        if (s.flare) {
-          ctx.beginPath();
-          ctx.moveTo(s.wx - cs * 4, s.wy);
-          ctx.lineTo(s.wx + cs * 4, s.wy);
-          ctx.moveTo(s.wx, s.wy - cs * 4);
-          ctx.lineTo(s.wx, s.wy + cs * 4);
-          ctx.strokeStyle = `rgba(255,255,255,${a * 0.15})`;
-          ctx.lineWidth = 1;
-          ctx.stroke();
+        if (s.flare && a > 0.4) {
+          drawCrossFlare(ctx, s.wx, s.wy, cs, a, time, col);
         }
       }
     }
