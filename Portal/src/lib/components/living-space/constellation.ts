@@ -173,14 +173,16 @@ export function buildConnData(
 export function createEDots(connData: ConnData[]): EDot[] {
   const result: EDot[] = [];
   connData.forEach((cd, i) => {
-    const count = cd.isInterGroup ? 3 : 2;
+    const count = cd.isInterGroup ? 4 : 3;
     for (let j = 0; j < count; j++) {
+      const baseSpeed = 0.0004 + Math.random() * 0.001;
+      const direction = j % 2 === 0 ? 1 : -1;
       result.push({
         connIdx: i,
         progress: Math.random(),
-        speed: 0.0006 + Math.random() * 0.0012,
-        size: 1 + Math.random() * 1.5,
-        alpha: 0.3 + Math.random() * 0.4,
+        speed: baseSpeed * direction,
+        size: 1 + Math.random() * 2,
+        alpha: 0.2 + Math.random() * 0.5,
         color: j % 2 === 0 ? cd.c1 : cd.c2,
       });
     }
@@ -236,14 +238,16 @@ export function drawConnectionLines(
       b: (c1.b + c2.b) / 2,
     };
     const bothRead = s1.read && s2.read;
-    const alpha = bothRead ? 0.45 : 0.2;
+    const baseAlpha = bothRead ? 0.45 : 0.2;
+    const pulse = 0.7 + 0.3 * Math.sin(time * 0.8 + s1.x * 0.003);
+    const alpha = baseAlpha * pulse;
 
     // Outer glow
     ctx.beginPath();
     ctx.moveTo(s1.x, s1.y);
     ctx.lineTo(s2.x, s2.y);
-    ctx.strokeStyle = `rgba(${c1.r},${c1.g},${c1.b},${alpha * 0.12})`;
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = `rgba(${c1.r},${c1.g},${c1.b},${alpha * 0.25})`;
+    ctx.lineWidth = 8;
     ctx.stroke();
 
     // Dashed line
@@ -255,7 +259,7 @@ export function drawConnectionLines(
     ctx.moveTo(s1.x, s1.y);
     ctx.lineTo(s2.x, s2.y);
     ctx.strokeStyle = g;
-    ctx.lineWidth = bothRead ? 1.2 : 0.8;
+    ctx.lineWidth = bothRead ? 1.8 : 1.2;
     ctx.setLineDash([4, 12]);
     ctx.lineDashOffset = -time * (bothRead ? 30 : 15);
     ctx.stroke();
@@ -267,27 +271,29 @@ export function drawEDots(
   ctx: CanvasRenderingContext2D,
   eDots: EDot[],
   connData: ConnData[],
-  emergingFrags: EmergingFrag[],
   time: number,
 ) {
   for (const dot of eDots) {
     dot.progress += dot.speed;
     if (dot.progress > 1) dot.progress -= 1;
+    if (dot.progress < 0) dot.progress += 1;
     const cd = connData[dot.connIdx];
     if (!cd || cd.s1.phase === "hidden" || cd.s2.phase === "hidden") continue;
-    if (!cd.s1.read || !cd.s2.read) continue;
-    const x = cd.s1.x + (cd.s2.x - cd.s1.x) * dot.progress;
-    const y = cd.s1.y + (cd.s2.y - cd.s1.y) * dot.progress;
-    const pulse = 0.6 + 0.4 * Math.sin(time * 3 + dot.progress * Math.PI);
-    const a = dot.alpha * pulse;
+    const bothRead = cd.s1.read && cd.s2.read;
+    const t = dot.progress;
+    const ease = 1 - Math.pow(2 * t - 1, 2); // ease near center, slow near ends
+    const pulse = 0.5 + 0.5 * Math.sin(time * 2.5 + dot.progress * Math.PI * 3);
+    const a = dot.alpha * pulse * (bothRead ? 1 : 0.35) * (0.6 + 0.4 * ease);
+    const x = cd.s1.x + (cd.s2.x - cd.s1.x) * t;
+    const y = cd.s1.y + (cd.s2.y - cd.s1.y) * t;
     const g = ctx.createRadialGradient(x, y, 0, x, y, dot.size * 5);
     g.addColorStop(
       0,
       `rgba(${dot.color.r},${dot.color.g},${dot.color.b},${a})`,
     );
     g.addColorStop(
-      0.5,
-      `rgba(${dot.color.r},${dot.color.g},${dot.color.b},${a * 0.2})`,
+      0.4,
+      `rgba(${dot.color.r},${dot.color.g},${dot.color.b},${a * 0.3})`,
     );
     g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();

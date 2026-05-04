@@ -521,7 +521,7 @@
     );
     drawShootingStars(ctx, shootingStars);
     drawConnectionLines(ctx, connData, time);
-    drawEDots(ctx, eDots, connData, emergingFrags, time);
+    drawEDots(ctx, eDots, connData, time);
     drawFragmentStars(ctx, emergingFrags, resonances, time);
     drawIgnition(
       ctx,
