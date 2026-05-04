@@ -299,7 +299,7 @@ export const stars: SpaceStar[] = [
     contentType: "fragment",
     contentRef: "frag-15",
     label: {},
-    connections: ["frag-14", "void-entry"],
+    connections: ["frag-14", "frag-16"],
     pulseSpeed: 1.6,
   },
 
@@ -314,7 +314,7 @@ export const stars: SpaceStar[] = [
     contentType: "fragment",
     contentRef: "frag-16",
     label: {},
-    connections: ["frag-10", "frag-1"],
+    connections: ["frag-10", "frag-1", "frag-15"],
     pulseSpeed: 2.5,
   },
 
@@ -334,7 +334,7 @@ export const stars: SpaceStar[] = [
       ja: "虚空へ",
       de: "Betrete die Leere",
     },
-    connections: ["frag-15"],
+    connections: [],
     pulseSpeed: 6,
   },
 ];

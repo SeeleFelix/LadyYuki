@@ -67,7 +67,7 @@ export function generateEmergingFrags(locale: Locale): {
     y: (Math.random() - 0.5) * 800,
     groupArea: "void-gate",
     color: groupColors.void,
-    connections: ["frag-15"],
+    connections: [],
     fragment: null,
     shortText: "",
   });
