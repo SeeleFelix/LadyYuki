@@ -137,35 +137,6 @@ export function getOrCreateChunk(
   return c;
 }
 
-export function createNebulas(
-  areas: Array<{ centerX?: number; centerY?: number } | undefined>,
-): Nebula[] {
-  const colors = [
-    { r: 139, g: 92, b: 246 },
-    { r: 59, g: 130, b: 246 },
-    { r: 236, g: 72, b: 153 },
-    { r: 99, g: 102, b: 241 },
-    { r: 6, g: 182, b: 212 },
-    { r: 180, g: 130, b: 255 },
-    { r: 255, g: 180, b: 100 },
-  ];
-  const result: Nebula[] = [];
-  for (let i = 0; i < 8; i++) {
-    const area = areas[i % areas.length];
-    result.push({
-      bx: (area?.centerX ?? -300) + (Math.random() - 0.5) * 200,
-      by: (area?.centerY ?? -100) + (Math.random() - 0.5) * 150,
-      radius: 500 + Math.random() * 400,
-      opacity: 0.015 + Math.random() * 0.03,
-      color: colors[i % colors.length],
-      speed: 0.008 + Math.random() * 0.015,
-      phase: Math.random() * Math.PI * 2,
-      seed: Math.random() * 1000,
-    });
-  }
-  return result;
-}
-
 // ══════════════════════════════════════
 //  Drawing functions
 // ══════════════════════════════════════

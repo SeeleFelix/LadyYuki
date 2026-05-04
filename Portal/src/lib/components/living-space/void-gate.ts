@@ -2,6 +2,57 @@ import type { EmergingFrag, IgnitionParticle } from "./types";
 import type { SpaceViewport } from "$lib/types/space";
 
 // ══════════════════════════════════════════
+//  Ignition system — particle burst + shake
+// ══════════════════════════════════════════
+
+export interface IgnitionSystem {
+  particles: IgnitionParticle[];
+  shake: number;
+}
+
+export function createIgnitionSystem(): IgnitionSystem {
+  return { particles: [], shake: 0 };
+}
+
+export function updateIgnition(sys: IgnitionSystem, dt: number): void {
+  for (const p of sys.particles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= dt;
+  }
+  sys.particles = sys.particles.filter((p) => p.life > 0);
+  sys.shake = Math.max(0, sys.shake - dt * 40);
+}
+
+export function spawnIgnitionBurst(
+  sys: IgnitionSystem,
+  x: number,
+  y: number,
+): void {
+  sys.shake = 18;
+  const colors = [
+    { r: 220, g: 210, b: 255 },
+    { r: 180, g: 160, b: 240 },
+    { r: 255, g: 255, b: 255 },
+    { r: 160, g: 180, b: 255 },
+    { r: 200, g: 180, b: 240 },
+  ];
+  for (let i = 0; i < 30; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 400 + Math.random() * 900;
+    sys.particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 0.3 + Math.random() * 0.5,
+      maxLife: 0.3 + Math.random() * 0.5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    });
+  }
+}
+
+// ══════════════════════════════════════════
 //  Void Gate — vortex → fissure → ring
 // ══════════════════════════════════════════
 

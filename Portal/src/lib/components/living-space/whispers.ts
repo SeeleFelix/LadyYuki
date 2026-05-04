@@ -1,9 +1,37 @@
-import type { Whisper } from "./types";
+import type { Whisper, EmergingFrag } from "./types";
+import { easeInOutQuad } from "./render-utils";
 
 export const WHISPER_DURATION = 3.5;
 
-export function easeInOutQuad(t: number): number {
-  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+export function updateWhispers(
+  whispers: Whisper[],
+  emergingFrags: EmergingFrag[],
+  emergeQueue: EmergingFrag[],
+  time: number,
+): { whispers: Whisper[]; emergeQueue: EmergingFrag[] } {
+  for (const w of whispers) {
+    w.progress += 1 / 60 / WHISPER_DURATION;
+    w.life -= 1 / 60;
+    if (w.progress >= 0.9 && w.progress - 1 / 60 / WHISPER_DURATION < 0.9) {
+      let best: EmergingFrag | null = null;
+      let bestDist = Infinity;
+      for (const ef of emergingFrags) {
+        if (ef.phase !== "hidden" || ef.starId === "void-entry") continue;
+        const d = Math.hypot(ef.x - w.tx, ef.y - w.ty);
+        if (d < bestDist) {
+          bestDist = d;
+          best = ef;
+        }
+      }
+      if (best) {
+        best.phase = "emerging";
+        best.phaseStart = time;
+        emergeQueue = emergeQueue.filter((f) => f.starId !== best.starId);
+      }
+    }
+  }
+  whispers = whispers.filter((w) => w.life > 0 && w.progress < 1);
+  return { whispers, emergeQueue };
 }
 
 export function drawWhispers(

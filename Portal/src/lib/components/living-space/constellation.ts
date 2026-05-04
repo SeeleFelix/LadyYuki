@@ -225,24 +225,39 @@ export function updateEmergence(
 export function drawConnectionLines(
   ctx: CanvasRenderingContext2D,
   connData: ConnData[],
-  emergingFrags: EmergingFrag[],
   time: number,
 ) {
   for (const cd of connData) {
-    if (cd.s1.phase === "hidden" || cd.s2.phase === "hidden") continue;
-    if (!cd.s1.read && !cd.s2.read) continue;
-    const dashOffset = (time * 0.6) % 20;
-    const g = ctx.createLinearGradient(cd.s1.x, cd.s1.y, cd.s2.x, cd.s2.y);
-    g.addColorStop(0, `rgba(${cd.c1.r},${cd.c1.g},${cd.c1.b},0.15)`);
-    g.addColorStop(0.5, `rgba(${cd.c2.r},${cd.c2.g},${cd.c2.b},0.2)`);
-    g.addColorStop(1, `rgba(${cd.c2.r},${cd.c2.g},${cd.c2.b},0.1)`);
+    const { s1, s2, c1, c2 } = cd;
+    if (s1.phase === "hidden" || s2.phase === "hidden") continue;
+    const midC = {
+      r: (c1.r + c2.r) / 2,
+      g: (c1.g + c2.g) / 2,
+      b: (c1.b + c2.b) / 2,
+    };
+    const bothRead = s1.read && s2.read;
+    const alpha = bothRead ? 0.45 : 0.2;
+
+    // Outer glow
     ctx.beginPath();
-    ctx.moveTo(cd.s1.x, cd.s1.y);
-    ctx.lineTo(cd.s2.x, cd.s2.y);
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s2.x, s2.y);
+    ctx.strokeStyle = `rgba(${c1.r},${c1.g},${c1.b},${alpha * 0.12})`;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Dashed line
+    const g = ctx.createLinearGradient(s1.x, s1.y, s2.x, s2.y);
+    g.addColorStop(0, `rgba(${c1.r},${c1.g},${c1.b},${alpha})`);
+    g.addColorStop(0.5, `rgba(${midC.r},${midC.g},${midC.b},${alpha})`);
+    g.addColorStop(1, `rgba(${c2.r},${c2.g},${c2.b},${alpha})`);
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s2.x, s2.y);
     ctx.strokeStyle = g;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 7]);
-    ctx.lineDashOffset = -dashOffset;
+    ctx.lineWidth = bothRead ? 1.2 : 0.8;
+    ctx.setLineDash([4, 12]);
+    ctx.lineDashOffset = -time * (bothRead ? 30 : 15);
     ctx.stroke();
     ctx.setLineDash([]);
   }
