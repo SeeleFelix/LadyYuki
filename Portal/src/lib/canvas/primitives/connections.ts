@@ -1,6 +1,7 @@
 import { theme } from "../theme";
 import type { EmergingFrag, ConnData, EDot } from "../types";
 import type { Star } from "$lib/types/agent";
+import { getConnectionPulseMul, type TimelinePhase } from "../timeline";
 
 const cConn = theme.constellation.connection;
 const cDots = theme.constellation.energyDots;
@@ -10,6 +11,7 @@ export function drawConnectionLine(
   s1: EmergingFrag,
   s2: EmergingFrag,
   time: number,
+  phase: TimelinePhase = "explore",
 ) {
   if (s1.phase === "hidden" || s2.phase === "hidden") return;
 
@@ -21,8 +23,10 @@ export function drawConnectionLine(
   };
   const bothRead = s1.read && s2.read;
   const baseAlpha = bothRead ? cConn.baseAlpha.read : cConn.baseAlpha.unread;
+  const phaseMul = getConnectionPulseMul(phase);
   const pulse =
-    0.7 + cConn.pulseAmp * Math.sin(time * cConn.pulseFreq + s1.x * 0.003);
+    0.7 +
+    cConn.pulseAmp * phaseMul * Math.sin(time * cConn.pulseFreq + s1.x * 0.003);
   const alpha = baseAlpha * pulse;
 
   // Outer glow

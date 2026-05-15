@@ -12,6 +12,7 @@ import {
   drawEDots,
   drawFragmentStars,
 } from "./systems/constellation";
+import type { TimelinePhase } from "./timeline";
 import { drawVoidGate, drawIgnition } from "./systems/void-gate";
 import { drawWhispers } from "./systems/whispers";
 import { drawVignette } from "./primitives/atmosphere";
@@ -56,6 +57,7 @@ const ALL_SYSTEMS: SystemName[] = [
 
 export interface FrameState {
   time: number;
+  phase: TimelinePhase;
   fieldBrightness: number;
   ignitionAge: number;
   awakenProgress: number;
@@ -193,13 +195,19 @@ export class CanvasRenderer {
 
     // L1 Narrative — connection lines + energy dots
     if (this.systems.has("constellation")) {
-      drawConnectionLines(ctx, state.connData, state.time);
+      drawConnectionLines(ctx, state.connData, state.time, state.phase);
       drawEDots(ctx, state.eDots, state.connData, state.time);
     }
 
     // L2 Waiting → L1 Narrative — fragment stars
     if (this.systems.has("constellation")) {
-      drawFragmentStars(ctx, state.emergingFrags, state.resonances, state.time);
+      drawFragmentStars(
+        ctx,
+        state.emergingFrags,
+        state.resonances,
+        state.time,
+        state.phase,
+      );
     }
 
     // L0 Focus — Void Gate + Ignition

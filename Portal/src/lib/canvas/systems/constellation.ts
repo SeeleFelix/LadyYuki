@@ -13,6 +13,8 @@ import { theme } from "$lib/canvas/theme";
 import {
   getEnergyDotDirection,
   getEnergyDotSpeedMul,
+  getConnectionPulseMul,
+  getStarBreathMul,
   type TimelinePhase,
 } from "../timeline";
 import { getHierarchyConfig, type HierarchyTier } from "../primitives/stars";
@@ -254,6 +256,7 @@ export function drawConnectionLines(
   ctx: CanvasRenderingContext2D,
   connData: ConnData[],
   time: number,
+  phase: TimelinePhase = "explore",
 ) {
   for (const cd of connData) {
     const { s1, s2, c1, c2 } = cd;
@@ -265,8 +268,12 @@ export function drawConnectionLines(
     };
     const bothRead = s1.read && s2.read;
     const baseAlpha = bothRead ? cConn.baseAlpha.read : cConn.baseAlpha.unread;
+    const pulseMul = getConnectionPulseMul(phase);
     const pulse =
-      0.7 + cConn.pulseAmp * Math.sin(time * cConn.pulseFreq + s1.x * 0.003);
+      0.7 +
+      cConn.pulseAmp *
+        pulseMul *
+        Math.sin(time * cConn.pulseFreq + s1.x * 0.003);
     const alpha = baseAlpha * pulse;
 
     // Outer glow
@@ -357,6 +364,7 @@ export function drawFragmentStars(
   emergingFrags: EmergingFrag[],
   resonances: Resonance[],
   time: number,
+  phase: TimelinePhase = "explore",
 ) {
   for (const ef of emergingFrags) {
     if (ef.phase === "hidden") continue;
@@ -374,10 +382,12 @@ export function drawFragmentStars(
       crystalScale = 0;
     }
 
+    const breathMul = getStarBreathMul(phase);
     const breath =
       1 +
       Math.sin(time * cStars.breathFreq + ef.id.charCodeAt(3)) *
-        cStars.breathAmp;
+        cStars.breathAmp *
+        breathMul;
     const unreadPulse =
       !ef.read && ef.phase === "star"
         ? 1 + Math.sin(time * cStars.unreadPulseFreq) * cStars.unreadPulseAmp

@@ -518,6 +518,7 @@
     renderer.render(
       {
         time,
+        phase: timeline.phase,
         fieldBrightness,
         ignitionAge,
         awakenProgress,
