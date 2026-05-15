@@ -1,14 +1,10 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import {
-    StarBackground,
-    Constellation,
-    VoidMessage,
-    CosmicInput,
-    FragmentDetail,
-  } from "$lib/components";
+  import { onMount, onDestroy } from "svelte";
+  import { browser } from "$app/environment";
+  import { VoidMessage, CosmicInput, FragmentDetail } from "$lib/components";
   import { conversationStore, visualStore } from "$lib/stores";
   import type { Fragment, Message, Star } from "$lib/types/agent";
+  import { CanvasRenderer, type AmbientFrameState } from "$lib/canvas/renderer";
   import {
     localeStore,
     detectLanguage,
@@ -34,6 +30,7 @@
   let currentLocale = $state($localeStore);
   let t = $derived(getTranslation(currentLocale));
   let selectedFragment = $state<Fragment | null>(null);
+  let selectedStarId = $state<string | null>(null);
 
   type VoidPhase =
     | "greeting"
@@ -47,6 +44,11 @@
 
   let currentVisualState = $state($visualStore);
   let currentConversation = $state($conversationStore);
+
+  // Canvas state
+  let canvas: HTMLCanvasElement;
+  let renderer: CanvasRenderer;
+  let animationFrameId: number;
 
   $effect(() => {
     const unsub1 = visualStore.subscribe((v) => (currentVisualState = v));
@@ -65,7 +67,48 @@
     sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     localeStore.initialize();
     fetchOpeningQuestion();
+
+    renderer = new CanvasRenderer(canvas, {
+      mode: "ambient",
+      systems: ["background", "constellation"],
+    });
+
+    function animate() {
+      const time = Date.now() * 0.001;
+      const state: AmbientFrameState = {
+        time,
+        fieldBrightness: 1.0,
+        stars: currentVisualState.stars,
+        lines: currentVisualState.lines,
+        selectedStarId,
+        viewport: { x: 0, y: 0, zoom: 1 },
+      };
+      renderer.renderAmbient(state);
+      animationFrameId = requestAnimationFrame(animate);
+    }
+    animate();
   });
+
+  onDestroy(() => {
+    if (!browser) return;
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  });
+
+  function handleCanvasClick(e: MouseEvent) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    for (const star of currentVisualState.stars) {
+      const dist = Math.hypot(cx - star.x, cy - star.y);
+      if (dist <= Math.max(star.size * 8, 25) && star.fragment) {
+        selectedStarId = star.id;
+        selectedFragment = star.fragment;
+        return;
+      }
+    }
+    selectedStarId = null;
+  }
 
   async function fetchOpeningQuestion() {
     phase = "loading";
@@ -214,12 +257,9 @@
     }
   }
 
-  function handleStarClick(fragment: Fragment, _star: Star) {
-    selectedFragment = fragment;
-  }
-
   function handleCloseFragmentDetail() {
     selectedFragment = null;
+    selectedStarId = null;
   }
 
   let latestAssistant = $derived(
@@ -233,8 +273,11 @@
 </svelte:head>
 
 <div class="app-container">
-  <StarBackground />
-  <Constellation onstarclick={handleStarClick} />
+  <canvas
+    bind:this={canvas}
+    class="fixed inset-0 w-full h-full"
+    onclick={handleCanvasClick}
+  ></canvas>
 
   <div class="content-layer">
     <div class="dialogue-container">
@@ -282,7 +325,7 @@
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    background: #0a0a0f;
+    background: #05050d;
   }
 
   .content-layer {
