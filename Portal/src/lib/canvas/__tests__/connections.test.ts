@@ -85,6 +85,7 @@ function makeFrag(overrides: Record<string, unknown> = {}) {
     screenX: 0,
     screenY: 0,
     textAlpha: 0,
+    zDepth: 0.5,
     ...overrides,
   };
 }
