@@ -118,20 +118,36 @@ describe("drawAgentStar", () => {
       id: "s1",
       x: 400,
       y: 300,
-      size: 1,
-      brightness: 0.3,
+      size: 3,
+      brightness: 0.8,
       twinkleSpeed: 1.5,
-      createdAt: Date.now(),
+      createdAt: 5000,
     };
+    const createdSec = star.createdAt / 1000;
+
+    // At creation time: age=0, entranceScale=0, cs=0 — nothing drawn
+    const ctx1 = new MockCtx();
     drawAgentStar(
-      ctx as unknown as CanvasRenderingContext2D,
+      ctx1 as unknown as CanvasRenderingContext2D,
       star,
-      star.createdAt / 1000 + 0.5,
+      createdSec,
       false,
       false,
     );
-    const arcCalls = ctx.calls.filter((c) => c.method === "arc");
-    expect(arcCalls.length).toBeGreaterThan(0);
+    const arcCalls1 = ctx1.calls.filter((c) => c.method === "arc");
+    expect(arcCalls1.length).toBe(0);
+
+    // After full entrance: age=0.8, entranceScale=1, cs=size — draws fully
+    const ctx2 = new MockCtx();
+    drawAgentStar(
+      ctx2 as unknown as CanvasRenderingContext2D,
+      star,
+      createdSec + 0.8,
+      false,
+      false,
+    );
+    const arcCalls2 = ctx2.calls.filter((c) => c.method === "arc");
+    expect(arcCalls2.length).toBeGreaterThanOrEqual(3);
   });
 });
 
