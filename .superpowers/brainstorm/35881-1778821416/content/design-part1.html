@@ -1,0 +1,82 @@
+<h2>设计方案 Part 1：视觉语言</h2>
+<p class="subtitle">这是整个重设计的基础。一个清晰的视觉语言定义了"什么是好的"，所有实现都围绕它展开。</p>
+
+<div class="section">
+  <h3>1. 色彩系统</h3>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr style="color:#94a3b8;font-size:13px;"><th style="text-align:left;padding:6px;">层级</th><th style="text-align:left;padding:6px;">用途</th><th style="text-align:left;padding:6px;">色值</th><th style="text-align:left;padding:6px;">感受</th></tr>
+    <tr><td style="padding:6px;font-weight:600;">Void Black</td><td style="padding:6px;">所有场景背景</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#05050d;border-radius:2px;vertical-align:middle;"></span> #05050d</td><td style="padding:6px;">绝对深度、虚空</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;font-weight:600;">Void Deep</td><td style="padding:6px;">星云边缘、暗区</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#08081a;border-radius:2px;vertical-align:middle;"></span> #08081a</td><td style="padding:6px;">微弱的蓝紫暗示</td></tr>
+    <tr><td style="padding:6px;font-weight:600;">Text Primary</td><td style="padding:6px;">主要文字</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#ffffff;border-radius:2px;vertical-align:middle;"></span> rgba(255,255,255,0.95)</td><td style="padding:6px;">清晰、明亮</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;font-weight:600;">Text Muted</td><td style="padding:6px;">辅助文字</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#94a3b8;border-radius:2px;vertical-align:middle;"></span> rgba(255,255,255,0.55)</td><td style="padding:6px;">退后、安静</td></tr>
+  </table>
+  <p style="margin-top:16px;"><strong>语义色（保留现有群组色，增加用途定义）：</strong></p>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr style="color:#94a3b8;font-size:13px;"><th style="text-align:left;padding:6px;">群组</th><th style="text-align:left;padding:6px;">颜色</th><th style="text-align:left;padding:6px;">语义</th></tr>
+    <tr><td style="padding:6px;">void-gate</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#6366f1;border-radius:2px;vertical-align:middle;"></span> Indigo</td><td style="padding:6px;">起点/门/未知</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;">origin</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#f59e0b;border-radius:2px;vertical-align:middle;"></span> Gold</td><td style="padding:6px;">起源/温暖/光</td></tr>
+    <tr><td style="padding:6px;">seelefelix</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#8b5cf6;border-radius:2px;vertical-align:middle;"></span> Purple</td><td style="padding:6px;">自我/灵魂</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;">chain</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#3b82f6;border-radius:2px;vertical-align:middle;"></span> Blue</td><td style="padding:6px;">联结/链</td></tr>
+    <tr><td style="padding:6px;">silhouette</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#ec4899;border-radius:2px;vertical-align:middle;"></span> Pink</td><td style="padding:6px;">轮廓/显现</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;">axiom</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#06b6d4;border-radius:2px;vertical-align:middle;"></span> Cyan</td><td style="padding:6px;">公理/真理</td></tr>
+    <tr><td style="padding:6px;">standard</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#a78bfa;border-radius:2px;vertical-align:middle;"></span> Violet</td><td style="padding:6px;">标准/尺度</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;">closing</td><td style="padding:6px;"><span style="display:inline-block;width:16px;height:16px;background:#f472b6;border-radius:2px;vertical-align:middle;"></span> Rose</td><td style="padding:6px;">终章/闭合</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>2. 视觉层级（4 层）</h3>
+  <p>这是最关键的设计决策。当前所有视觉元素在同一平面竞争注意力，缺乏层级意味着缺乏意义。</p>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr style="color:#94a3b8;font-size:13px;"><th style="text-align:left;padding:6px;">层级</th><th style="text-align:left;padding:6px;">元素</th><th style="text-align:left;padding:6px;">渲染策略</th></tr>
+    <tr><td style="padding:6px;font-weight:700;color:#fff;">L0 · 焦点层</td><td style="padding:6px;">当前交互对象、Void Gate</td><td style="padding:6px;">最亮、最大光晕半径、独占暖白核心</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;font-weight:700;color:#e2e8f0;">L1 · 叙事层</td><td style="padding:6px;">已读 Fragment 星体、连接线、能量点</td><td style="padding:6px;">语义颜色、中等光晕、呼吸动画</td></tr>
+    <tr><td style="padding:6px;font-weight:700;color:#94a3b8;">L2 · 等待层</td><td style="padding:6px;">未读 Fragment 星体</td><td style="padding:6px;">微弱脉动环、降低亮度、提示"可交互"</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;font-weight:700;color:#64748b;">L3 · 氛围层</td><td style="padding:6px;">背景星、星云、银河、宇宙尘</td><td style="padding:6px;">最低亮度、大尺度渐变、无独立动画</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>3. 动效哲学</h3>
+  <p>从"装饰性循环脉冲"转为"叙事性阶段动画"：</p>
+  <ul>
+    <li><strong>主时钟：</strong>全局 BPM = 12（每拍 5 秒），所有循环动画对齐拍子</li>
+    <li><strong>进入动画：</strong>元素首次出现时有入场动画，之后就安静下来（不反复闪烁）</li>
+    <li><strong>响应动画：</strong>只在用户交互时触发（hover 放大、click 涟漪、read 共振）</li>
+    <li><strong>环境动画：</strong>仅 L3 氛围层保留极慢的循环（> 10s 周期），不抢注意力</li>
+    <li><strong>缓动曲线：</strong>统一使用 <code>cubic-bezier(0.4, 0, 0.2, 1)</code>（ease-out 感觉）</li>
+    <li><strong>能量点：</strong>单向流动（从 void-entry 向外扩散），而非双向乱窜</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>4. 空间深度</h3>
+  <ul>
+    <li><strong>大气透视：</strong>距离 void-entry 越远的星体越偏蓝、越低饱和</li>
+    <li><strong>Vignette 增强：</strong>边缘压暗从 0.70 → 0.85，中心保留清晰</li>
+    <li><strong>星云分层：</strong>大星云在远处（低 opacity），小星云在近处（高 opacity）</li>
+    <li><strong>Fragment 星体：</strong>添加微秒的深度偏移（z-depth → parallax factor），不再完全与背景星同平面</li>
+  </ul>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:#ffffff08;border-radius:8px;">
+  <p style="margin:0;"><strong>这4个设计决策（色彩、层级、动效、深度）是你觉得对的方向吗？</strong></p>
+  <p style="margin:8px 0 0 0;color:#94a3b8;">在终端告诉我你的想法，或点击下方选项。</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="good" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>方向正确，继续下一部分</h3>
+      <p>色彩系统、层级划分、动效哲学、空间深度的设计都符合预期</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">△</div>
+    <div class="content">
+      <h3>方向对，但需要调整</h3>
+      <p>基本认可但有具体的修改意见</p>
+    </div>
+  </div>
+</div>

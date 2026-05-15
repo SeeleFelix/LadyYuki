@@ -1,0 +1,63 @@
+<h2>三种改造方案</h2>
+<p class="subtitle">你选择了全部三个方向（统一引擎 + 设计系统 + 动效叙事），这是正确的——它们互为因果，应该一起解决。以下是三种不同力度的方案。</p>
+
+<hr style="border-color:#ffffff10;margin:24px 0;">
+
+<div class="cards">
+  <div class="card" data-choice="approach-a" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>A. 最小修复 <span style="font-size:13px;color:#f87171;">不推荐</span></h3>
+      <p><strong>范围：</strong>仅修复最刺眼的不一致</p>
+      <ul>
+        <li>统一三个背景色 (#04040a / #06060e / #0a0a0f → 一个值)</li>
+        <li>Vignette opacity 统一</li>
+        <li>CSS 通配符过渡限制为仅需要的元素</li>
+        <li>删除死代码 (render-utils drawCrossFlare)</li>
+        <li>微调动效参数降低杂乱感</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>改动量小，一天可完成</li><li>零风险，不改架构</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>治标不治本</li><li>两套引擎仍然独立</li><li>未来改进仍需双倍工作</li><li>动效问题只微调不重构</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="approach-b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B. 共享渲染核心 <span style="font-size:13px;color:#4ade80;">推荐</span></h3>
+      <p><strong>范围：</strong>提取共享 Canvas 原语 + 设计系统，用 living-space 模块替换 Void 页的独立实现</p>
+      <ol>
+        <li><strong>建立 CanvasTheme：</strong>单一颜色/参数源，CSS 变量和 Canvas 渲染统一取值</li>
+        <li><strong>提取共享原语：</strong>starColor, drawCrossFlare, drawVignette, drawNebula 等所有重复函数统一到一处</li>
+        <li><strong>Void 页接入：</strong>用 background.ts + constellation.ts 的共享模块替换 StarBackground.svelte + Constellation.svelte</li>
+        <li><strong>统一动效参数：</strong>所有时间参数收敛到一个节奏系统</li>
+      </ol>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>从根本上消除代码重复</li><li>两页视觉自动一致</li><li>未来改动只需改一处</li><li>保留了当前所有功能</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>涉及 Void 页较大的重构</li><li>需要仔细处理两页的微秒差异</li><li>大约 2-3 天工作量</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="approach-c" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>C. 全面重设计 <span style="font-size:13px;color:#fbbf24;">激进</span></h3>
+      <p><strong>范围：</strong>从零设计视觉语言，重建渲染管线，引入视觉层级和叙事动画系统</p>
+      <ol>
+        <li>先写 Visual Design Spec（配色、层级、动效曲线、排版）</li>
+        <li>新建统一的 CanvasRenderer 类，替代所有现有渲染代码</li>
+        <li>设计 AnimationTimeline 系统（阶段式而非循环式）</li>
+        <li>引入视觉层级：主要星体→次要星体→背景星→装饰</li>
+        <li>两页通过同一渲染器实例的不同配置驱动</li>
+      </ol>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>最好的长期效果</li><li>可以追求专业级视觉质量</li><li>设计意图和代码结构完全对齐</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>工期长（1-2 周）</li><li>可能丢失项目当前的"手感"</li><li>过度工程化的风险</li><li>当前代码量大，全量替换风险高</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <p><strong>建议选 B</strong>，理由：它在"治本"和"务实"之间取得了平衡。方案 C 的全面重设计在当前阶段风险过高——项目还在迭代中，视觉语言还没稳定，现在就投入大量时间做"完美设计"反而可能做错方向。方案 B 先统一基础设施，让你后续的每次视觉改进都能自动惠及两个页面，这是投入产出比最高的选择。</p>
+</div>

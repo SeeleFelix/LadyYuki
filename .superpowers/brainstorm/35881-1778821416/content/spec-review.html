@@ -1,0 +1,49 @@
+<h2>设计文档已完成</h2>
+<p class="subtitle">完整 Spec 已写入 <code>docs/superpowers/specs/2026-05-15-canvas-visual-redesign-design.md</code></p>
+
+<div class="section">
+  <h3>Spec 自我审查结果</h3>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr style="color:#94a3b8;font-size:13px;"><th style="text-align:left;padding:6px;">检查项</th><th style="text-align:left;padding:6px;">结果</th></tr>
+    <tr><td style="padding:6px;">Placeholder 扫描</td><td style="padding:6px;color:#4ade80;">✓ 无 TBD/TODO/未完成章节</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;">内部一致性</td><td style="padding:6px;color:#4ade80;">✓ 架构与功能描述对齐，迁移步骤与文件列表一致</td></tr>
+    <tr><td style="padding:6px;">范围检查</td><td style="padding:6px;color:#4ade80;">✓ 聚焦于 Canvas 渲染统一 + 视觉重设计，无无关变更</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;">歧义检查</td><td style="padding:6px;color:#4ade80;">✓ 所有决策明确，双向能量点行为按阶段定义</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>文档结构概览</h3>
+  <ol>
+    <li><strong>Context</strong> — 为什么要做这个改造（两套引擎、15个具体问题）</li>
+    <li><strong>色彩系统</strong> — 统一的 Void Black + 8 个语义色</li>
+    <li><strong>视觉层级</strong> — L0 焦点 → L1 叙事 → L2 等待 → L3 氛围</li>
+    <li><strong>动效哲学</strong> — 12 BPM 主时钟 + 4 阶段叙事 + 双向能量点保留</li>
+    <li><strong>空间深度</strong> — 大气透视 + Vignette + 星云分层 + 深度偏移</li>
+    <li><strong>架构</strong> — CanvasTheme / CanvasRenderer / AnimationTimeline / primitives / systems</li>
+    <li><strong>迁移策略</strong> — 三步渐进替换（提取参数 → 统一引擎 → 视觉重设计）</li>
+    <li><strong>验证方案</strong> — 每步的可测试验收标准</li>
+  </ol>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:#ffffff08;border-radius:8px;">
+  <p style="margin:0;"><strong>请查看设计文档，确认无误后我们进入实现计划阶段。</strong></p>
+  <p style="margin:8px 0 0 0;color:#94a3b8;">文档位置：docs/superpowers/specs/2026-05-15-canvas-visual-redesign-design.md</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approved" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>设计文档 OK，进入实现</h3>
+      <p>Spec 内容无误，可以开始写实现计划</p>
+    </div>
+  </div>
+  <div class="option" data-choice="changes" onclick="toggleSelect(this)">
+    <div class="letter">△</div>
+    <div class="content">
+      <h3>需要修改 Spec</h3>
+      <p>有具体的修改意见</p>
+    </div>
+  </div>
+</div>

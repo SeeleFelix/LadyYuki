@@ -1,12 +1,14 @@
 import type { BgStar, Dust, Chunk, Nebula, ShootingStar } from "./types";
 import type { SpaceViewport } from "$lib/types/space";
 import type { EmergingFrag } from "./types";
+import { theme, pseudoNoise } from "$lib/canvas/theme";
+import { applyAtmosphericPerspective } from "$lib/canvas/primitives/atmosphere";
 
 // ══════════════════════════════════════
 //  Chunk-based infinite background
 // ══════════════════════════════════════
 
-export const CHUNK_SIZE = 1200;
+export const CHUNK_SIZE = theme.background.chunkSize;
 
 export function chunkKey(cx: number, cy: number): string {
   return `${cx},${cy}`;
@@ -19,22 +21,20 @@ export function chunkSeed(cx: number, cy: number): number {
 // Milky Way: diagonal band
 export function milkyWayStrength(wx: number, wy: number): number {
   const dist = Math.abs(wy - 0.5 * wx) / Math.sqrt(1 + 0.25);
-  const bandWidth = 800;
-  return Math.exp(-(dist * dist) / (2 * bandWidth * bandWidth));
+  return Math.exp(
+    -(dist * dist) /
+      (2 *
+        theme.background.milkyWayBandWidth *
+        theme.background.milkyWayBandWidth),
+  );
 }
 
-export function noise(x: number, y: number, s: number): number {
-  const n = Math.sin(x * 12.9898 + y * 78.233 + s) * 43758.5453;
-  return n - Math.floor(n);
-}
+const noise = pseudoNoise;
+export { noise };
+export { theme }; // allow living-space modules to access theme directly
 
 export function starColor(temp: number): { r: number; g: number; b: number } {
-  if (temp < 0.5) {
-    const t = temp * 2;
-    return { r: Math.floor(180 + 75 * t), g: Math.floor(200 + 55 * t), b: 255 };
-  }
-  const t = (temp - 0.5) * 2;
-  return { r: 255, g: Math.floor(255 - 55 * t), b: Math.floor(255 - 155 * t) };
+  return theme.starColorTemp(temp);
 }
 
 export function generateChunk(cx: number, cy: number): Chunk {
@@ -46,8 +46,13 @@ export function generateChunk(cx: number, cy: number): Chunk {
     return (s - 1) / 2147483646;
   }
 
+  const { starCount, starTypeDistribution: dist } = theme.background;
+  const dustCfg = dist.dust;
+  const fieldCfg = dist.field;
+  const beaconCfg = dist.beacon;
+
   const stars: BgStar[] = [];
-  for (let i = 0; i < 800; i++) {
+  for (let i = 0; i < starCount; i++) {
     let wx = ox + rnd() * CHUNK_SIZE;
     let wy = oy + rnd() * CHUNK_SIZE;
     const mw = milkyWayStrength(wx, wy);
@@ -59,27 +64,39 @@ export function generateChunk(cx: number, cy: number): Chunk {
     let flare: boolean;
     let temp: number;
 
-    if (i < 560) {
+    if (i < dustCfg.count) {
       type = "dust";
-      size = 0.2 + rnd() * 0.4;
-      opacity = 0.03 + rnd() * 0.13;
-      twinkleSpeed = 0.1 + rnd() * 0.25;
-      temp = rnd() * 0.3;
+      size = dustCfg.size[0] + rnd() * (dustCfg.size[1] - dustCfg.size[0]);
+      opacity =
+        dustCfg.opacity[0] + rnd() * (dustCfg.opacity[1] - dustCfg.opacity[0]);
+      twinkleSpeed =
+        dustCfg.twinkleSpeed[0] +
+        rnd() * (dustCfg.twinkleSpeed[1] - dustCfg.twinkleSpeed[0]);
+      temp = rnd() * dustCfg.tempRange;
       flare = false;
-    } else if (i < 760) {
+    } else if (i < dustCfg.count + fieldCfg.count) {
       type = "field";
-      size = 0.6 + rnd() * 1.0;
-      opacity = 0.2 + rnd() * 0.35;
-      twinkleSpeed = 0.3 + rnd() * 0.8;
+      size = fieldCfg.size[0] + rnd() * (fieldCfg.size[1] - fieldCfg.size[0]);
+      opacity =
+        fieldCfg.opacity[0] +
+        rnd() * (fieldCfg.opacity[1] - fieldCfg.opacity[0]);
+      twinkleSpeed =
+        fieldCfg.twinkleSpeed[0] +
+        rnd() * (fieldCfg.twinkleSpeed[1] - fieldCfg.twinkleSpeed[0]);
       temp = rnd();
       flare = false;
     } else {
       type = "beacon";
-      size = 1.5 + rnd() * 2.8;
-      opacity = 0.5 + rnd() * 0.4;
-      twinkleSpeed = 0.4 + rnd() * 1.2;
+      size =
+        beaconCfg.size[0] + rnd() * (beaconCfg.size[1] - beaconCfg.size[0]);
+      opacity =
+        beaconCfg.opacity[0] +
+        rnd() * (beaconCfg.opacity[1] - beaconCfg.opacity[0]);
+      twinkleSpeed =
+        beaconCfg.twinkleSpeed[0] +
+        rnd() * (beaconCfg.twinkleSpeed[1] - beaconCfg.twinkleSpeed[0]);
       temp = rnd();
-      flare = rnd() < 0.15;
+      flare = rnd() < beaconCfg.flareChance;
       if (rnd() > mw * 0.5 + 0.5) {
         wx = ox + rnd() * CHUNK_SIZE;
         wy = oy + rnd() * CHUNK_SIZE;
@@ -99,14 +116,9 @@ export function generateChunk(cx: number, cy: number): Chunk {
     });
   }
 
-  const dustColors = [
-    { r: 139, g: 92, b: 246 },
-    { r: 59, g: 130, b: 246 },
-    { r: 236, g: 72, b: 153 },
-    { r: 255, g: 220, b: 180 },
-  ];
+  const dustColors = theme.background.dustColors;
   const dusts: Dust[] = [];
-  for (let i = 0; i < 35; i++) {
+  for (let i = 0; i < theme.background.dustCount; i++) {
     dusts.push({
       x: ox + rnd() * CHUNK_SIZE,
       y: oy + rnd() * CHUNK_SIZE,
@@ -299,7 +311,12 @@ export function drawBgStars(
         }
       }
 
-      const col = starColor(Math.max(0, Math.min(1, temp)));
+      const rawCol = starColor(Math.max(0, Math.min(1, temp)));
+      const col = applyAtmosphericPerspective(
+        rawCol,
+        sd,
+        theme.atmosphere.depthShift.maxPerspectiveDistance,
+      );
       const sz = s.size * sizeMul;
 
       if (s.type === "dust") {
@@ -418,9 +435,9 @@ export function drawMilkyWay(
 }
 
 const METEOR_COLORS: Record<string, { r: number; g: number; b: number }> = {
-  swift: { r: 255, g: 255, b: 255 },
-  fireball: { r: 255, g: 220, b: 155 },
-  longtrail: { r: 200, g: 220, b: 255 },
+  swift: theme.background.meteors.types.swift.color,
+  fireball: theme.background.meteors.types.fireball.color,
+  longtrail: theme.background.meteors.types.longtrail.color,
 };
 
 export function spawnShootingStar(
@@ -430,7 +447,7 @@ export function spawnShootingStar(
 ): void {
   const hw = canvas.width / viewport.zoom / 2;
   const hh = canvas.height / viewport.zoom / 2;
-  const burst = Math.random() < 0.2;
+  const burst = Math.random() < theme.background.meteors.burstChance;
   const count = burst ? 2 + Math.floor(Math.random() * 2) : 1;
   for (let n = 0; n < count; n++) {
     const typeRand = Math.random();
@@ -438,12 +455,10 @@ export function spawnShootingStar(
       typeRand < 0.3 ? "swift" : typeRand < 0.6 ? "fireball" : "longtrail"
     ) as ShootingStar["type"];
     const col = METEOR_COLORS[type];
+    const cfg = theme.background.meteors.types[type];
     const screenSpeed =
-      type === "swift"
-        ? 200 + Math.random() * 200
-        : type === "fireball"
-          ? 100 + Math.random() * 150
-          : 60 + Math.random() * 100;
+      cfg.screenSpeed[0] +
+      Math.random() * (cfg.screenSpeed[1] - cfg.screenSpeed[0]);
     const speed = screenSpeed / viewport.zoom;
     const angle = (Math.random() - 0.5) * Math.PI * 0.7;
     let sx: number, sy: number;
@@ -474,11 +489,7 @@ export function spawnShootingStar(
     const vx = Math.cos(angle) * speed;
     const vy = Math.sin(angle) * speed;
     const maxLife =
-      type === "swift"
-        ? 1.5 + Math.random() * 2
-        : type === "fireball"
-          ? 3 + Math.random() * 3
-          : 4 + Math.random() * 4;
+      cfg.maxLife[0] + Math.random() * (cfg.maxLife[1] - cfg.maxLife[0]);
     const delay = n * (0.6 + Math.random() * 1.2);
     shootingStars.push({
       x: sx - vx * delay,

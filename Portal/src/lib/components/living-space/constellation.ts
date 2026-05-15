@@ -3,10 +3,13 @@ import type { Fragment } from "$lib/types/agent";
 import type { Locale } from "$lib/i18n/detector";
 import { getFragmentById } from "$lib/data/fragments";
 import { groupColors, getStarById } from "$lib/data/constellation";
+import { theme } from "$lib/canvas/theme";
 
-const EMERGE_DURATION = 1.2;
-const LINGER_DURATION = 3.5;
-const CRYSTALLIZE_DURATION = 1.0;
+const cEmergence = theme.constellation.emergence;
+const cConn = theme.constellation.connection;
+const cDots = theme.constellation.energyDots;
+const cStars = theme.constellation.fragmentStars;
+const cForce = theme.constellation.force;
 
 // ══════════════════════════════════════
 //  Force layout + emergence init
@@ -73,11 +76,11 @@ export function generateEmergingFrags(locale: Locale): {
   });
 
   // Force simulation
-  const ITER = 180,
-    REPULSION = 80000,
-    SPRING_LEN = 280,
-    SPRING_K = 0.06,
-    CENTER_K = 0.002;
+  const ITER = cForce.iterations,
+    REPULSION = cForce.repulsion,
+    SPRING_LEN = cForce.springLen,
+    SPRING_K = cForce.springK,
+    CENTER_K = cForce.centerK;
   for (let iter = 0; iter < ITER; iter++) {
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -121,8 +124,10 @@ export function generateEmergingFrags(locale: Locale): {
     starId: n.starId,
     x: n.x,
     y: n.y,
-    size: 4.5 + Math.random() * 0.5,
-    brightness: 0.8 + Math.random() * 0.1,
+    size: cStars.size[0] + Math.random() * (cStars.size[1] - cStars.size[0]),
+    brightness:
+      cStars.brightness[0] +
+      Math.random() * (cStars.brightness[1] - cStars.brightness[0]),
     phase: "hidden",
     phaseStart: 0,
     read: false,
@@ -173,16 +178,21 @@ export function buildConnData(
 export function createEDots(connData: ConnData[]): EDot[] {
   const result: EDot[] = [];
   connData.forEach((cd, i) => {
-    const count = cd.isInterGroup ? 4 : 3;
+    const count = cd.isInterGroup
+      ? cDots.interGroupCount
+      : cDots.intraGroupCount;
     for (let j = 0; j < count; j++) {
-      const baseSpeed = 0.0004 + Math.random() * 0.001;
-      const direction = j % 2 === 0 ? 1 : -1;
+      const baseSpeed =
+        cDots.baseSpeed[0] +
+        Math.random() * (cDots.baseSpeed[1] - cDots.baseSpeed[0]);
+      const direction = cDots.bidirectional && j % 2 === 0 ? 1 : -1;
       result.push({
         connIdx: i,
         progress: Math.random(),
         speed: baseSpeed * direction,
-        size: 1 + Math.random() * 2,
-        alpha: 0.2 + Math.random() * 0.5,
+        size: cDots.size[0] + Math.random() * (cDots.size[1] - cDots.size[0]),
+        alpha:
+          cDots.alpha[0] + Math.random() * (cDots.alpha[1] - cDots.alpha[0]),
         color: j % 2 === 0 ? cd.c1 : cd.c2,
       });
     }
@@ -205,15 +215,15 @@ export function updateEmergence(
   for (const ef of emergingFrags) {
     if (ef.phase === "hidden" || ef.phase === "star") continue;
     const elapsed = time - ef.phaseStart;
-    if (ef.phase === "emerging" && elapsed >= EMERGE_DURATION) {
+    if (ef.phase === "emerging" && elapsed >= cEmergence.emerge) {
       ef.phase = "lingering";
       ef.phaseStart = time;
-    } else if (ef.phase === "lingering" && elapsed >= LINGER_DURATION) {
+    } else if (ef.phase === "lingering" && elapsed >= cEmergence.linger) {
       ef.phase = "crystallizing";
       ef.phaseStart = time;
     } else if (
       ef.phase === "crystallizing" &&
-      elapsed >= CRYSTALLIZE_DURATION
+      elapsed >= cEmergence.crystallize
     ) {
       ef.phase = "star";
     }
@@ -238,16 +248,17 @@ export function drawConnectionLines(
       b: (c1.b + c2.b) / 2,
     };
     const bothRead = s1.read && s2.read;
-    const baseAlpha = bothRead ? 0.45 : 0.2;
-    const pulse = 0.7 + 0.3 * Math.sin(time * 0.8 + s1.x * 0.003);
+    const baseAlpha = bothRead ? cConn.baseAlpha.read : cConn.baseAlpha.unread;
+    const pulse =
+      0.7 + cConn.pulseAmp * Math.sin(time * cConn.pulseFreq + s1.x * 0.003);
     const alpha = baseAlpha * pulse;
 
     // Outer glow
     ctx.beginPath();
     ctx.moveTo(s1.x, s1.y);
     ctx.lineTo(s2.x, s2.y);
-    ctx.strokeStyle = `rgba(${c1.r},${c1.g},${c1.b},${alpha * 0.25})`;
-    ctx.lineWidth = 8;
+    ctx.strokeStyle = `rgba(${c1.r},${c1.g},${c1.b},${alpha * cConn.outerGlow.alphaMul})`;
+    ctx.lineWidth = cConn.outerGlow.lineWidth;
     ctx.stroke();
 
     // Dashed line
@@ -259,9 +270,15 @@ export function drawConnectionLines(
     ctx.moveTo(s1.x, s1.y);
     ctx.lineTo(s2.x, s2.y);
     ctx.strokeStyle = g;
-    ctx.lineWidth = bothRead ? 1.8 : 1.2;
-    ctx.setLineDash([4, 12]);
-    ctx.lineDashOffset = -time * (bothRead ? 30 : 15);
+    ctx.lineWidth = bothRead
+      ? cConn.mainLine.lineWidth.read
+      : cConn.mainLine.lineWidth.unread;
+    ctx.setLineDash(cConn.mainLine.dash);
+    ctx.lineDashOffset =
+      -time *
+      (bothRead
+        ? cConn.mainLine.dashSpeed.read
+        : cConn.mainLine.dashSpeed.unread);
     ctx.stroke();
     ctx.setLineDash([]);
   }
@@ -282,11 +299,23 @@ export function drawEDots(
     const bothRead = cd.s1.read && cd.s2.read;
     const t = dot.progress;
     const ease = 1 - Math.pow(2 * t - 1, 2); // ease near center, slow near ends
-    const pulse = 0.5 + 0.5 * Math.sin(time * 2.5 + dot.progress * Math.PI * 3);
-    const a = dot.alpha * pulse * (bothRead ? 1 : 0.35) * (0.6 + 0.4 * ease);
+    const pulse =
+      0.5 + 0.5 * Math.sin(time * cDots.pulseFreq + dot.progress * Math.PI * 3);
+    const a =
+      dot.alpha *
+      pulse *
+      (bothRead ? 1 : cDots.unreadAlphaMul) *
+      (0.6 + 0.4 * ease);
     const x = cd.s1.x + (cd.s2.x - cd.s1.x) * t;
     const y = cd.s1.y + (cd.s2.y - cd.s1.y) * t;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, dot.size * 5);
+    const g = ctx.createRadialGradient(
+      x,
+      y,
+      0,
+      x,
+      y,
+      dot.size * cDots.glowRadiusMul,
+    );
     g.addColorStop(
       0,
       `rgba(${dot.color.r},${dot.color.g},${dot.color.b},${a})`,
@@ -323,35 +352,47 @@ export function drawFragmentStars(
 
     let crystalScale = 1;
     if (isCrystallizing) {
-      crystalScale = Math.min(1, elapsed / CRYSTALLIZE_DURATION);
+      crystalScale = Math.min(1, elapsed / cEmergence.crystallize);
       crystalScale = 1 - Math.pow(1 - crystalScale, 3);
     } else if (isEmerging) {
       crystalScale = 0;
     }
 
-    const breath = 1 + Math.sin(time * 0.5 + ef.id.charCodeAt(3)) * 0.12;
+    const breath =
+      1 +
+      Math.sin(time * cStars.breathFreq + ef.id.charCodeAt(3)) *
+        cStars.breathAmp;
     const unreadPulse =
-      !ef.read && ef.phase === "star" ? 1 + Math.sin(time * 2.5) * 0.12 : 1;
-    const bright = ef.brightness * (ef.read ? 1.0 : 1.2) * unreadPulse;
+      !ef.read && ef.phase === "star"
+        ? 1 + Math.sin(time * cStars.unreadPulseFreq) * cStars.unreadPulseAmp
+        : 1;
+    const bright =
+      ef.brightness *
+      (ef.read ? 1.0 : cStars.unreadBrightnessBoost) *
+      unreadPulse;
     const twinkle =
       ef.phase === "star"
-        ? Math.sin(time * 1.5 + ef.id.charCodeAt(5)) * 0.1
+        ? Math.sin(time * cStars.twinkleFreq + ef.id.charCodeAt(5)) *
+          cStars.twinkleAmp
         : 0;
     const eff = bright + twinkle;
-    const proxBoost = 1 + ef.proximity * 0.5;
+    const proxBoost = 1 + ef.proximity * cStars.proximityBoostMul;
     let resBoost = 1;
     for (const r of resonances) {
       if (r.starId !== ef.starId) continue;
       const resElapsed = time - (r.startTime + r.delay);
       if (resElapsed < 0 || resElapsed > r.duration) continue;
       const resT = resElapsed / r.duration;
-      resBoost = 1 + (1 - resT) * Math.sin(resT * Math.PI) * 0.6;
+      resBoost =
+        1 + (1 - resT) * Math.sin(resT * Math.PI) * cStars.resonanceBoost;
     }
     const cs = ef.size * breath * crystalScale * (1 + (resBoost - 1) * 0.3);
     if (crystalScale < 0.01) continue;
 
+    const halo = cStars.halo;
+
     // Super-outer bloom
-    const soR = cs * 14;
+    const soR = cs * halo.superOuterBloom;
     const sog = ctx.createRadialGradient(ef.x, ef.y, cs * 5, ef.x, ef.y, soR);
     sog.addColorStop(
       0,
@@ -364,7 +405,7 @@ export function drawFragmentStars(
     ctx.fill();
 
     // Outer halo
-    const oR = cs * 8;
+    const oR = cs * halo.outerHalo;
     const og = ctx.createRadialGradient(ef.x, ef.y, cs * 2, ef.x, ef.y, oR);
     og.addColorStop(
       0,
@@ -381,7 +422,7 @@ export function drawFragmentStars(
     ctx.fill();
 
     // Mid halo
-    const mR = cs * 4;
+    const mR = cs * halo.midHalo;
     const mg = ctx.createRadialGradient(ef.x, ef.y, cs, ef.x, ef.y, mR);
     mg.addColorStop(
       0,
@@ -398,7 +439,7 @@ export function drawFragmentStars(
     ctx.fill();
 
     // Inner glow
-    const igR = cs * 2.5;
+    const igR = cs * halo.innerGlow;
     const igg = ctx.createRadialGradient(ef.x, ef.y, cs * 0.3, ef.x, ef.y, igR);
     igg.addColorStop(
       0,
@@ -416,10 +457,11 @@ export function drawFragmentStars(
 
     // Unread ring
     if (!ef.read && ef.phase === "star") {
+      const ring = cStars.unreadRing;
       ctx.beginPath();
-      ctx.arc(ef.x, ef.y, mR + 3, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${0.45 + unreadPulse * 0.25})`;
-      ctx.lineWidth = 2;
+      ctx.arc(ef.x, ef.y, mR + ring.radiusOffset, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${ring.alpha + unreadPulse * 0.25})`;
+      ctx.lineWidth = ring.lineWidth;
       ctx.stroke();
     }
 

@@ -1,0 +1,138 @@
+<h2>设计方案 Part 2：技术架构</h2>
+<p class="subtitle">统一渲染系统，两个页面共享同一个 Canvas 引擎。</p>
+
+<div class="section">
+  <h3>新模块结构</h3>
+  <pre style="background:#ffffff06;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6;">
+src/lib/
+├── canvas/                          <span style="color:#64748b;">← 新建：统一的 Canvas 渲染引擎</span>
+│   ├── theme.ts                     <span style="color:#64748b;">  CanvasTheme — 所有视觉参数唯一来源</span>
+│   ├── renderer.ts                  <span style="color:#64748b;">  CanvasRenderer — 统一的渲染管线</span>
+│   ├── timeline.ts                  <span style="color:#64748b;">  AnimationTimeline — 主时钟 + 阶段管理</span>
+│   ├── primitives/
+│   │   ├── stars.ts                 <span style="color:#64748b;">  所有类型的星体绘制（L0-L3）</span>
+│   │   ├── connections.ts           <span style="color:#64748b;">  连接线 + 双向能量点</span>
+│   │   ├── nebula.ts               <span style="color:#64748b;">  星云、银河带</span>
+│   │   ├── atmosphere.ts           <span style="color:#64748b;">  Vignette, 大气透视, 尘埃</span>
+│   │   └── effects.ts             <span style="color:#64748b;">  Cross flare, 涟漪, 共振波</span>
+│   └── systems/
+│       ├── background.ts           <span style="color:#64748b;">  Chunk 背景星系统（复用现有逻辑）</span>
+│       ├── constellation.ts        <span style="color:#64748b;">  星座布局 + Fragment 星体</span>
+│       ├── void-gate.ts           <span style="color:#64748b;">  Void Gate + 点火</span>
+│       ├── whispers.ts            <span style="color:#64748b;">  Whisper 轨迹</span>
+│       └── meteors.ts             <span style="color:#64748b;">  流星系统</span>
+│
+├── components/
+│   ├── LivingSpace.svelte          <span style="color:#64748b;">  → 简化为薄壳，委托给 CanvasRenderer</span>
+│   ├── StarBackground.svelte       <span style="color:#64748b;">  → 删除，用 CanvasRenderer 替代</span>
+│   └── Constellation.svelte        <span style="color:#64748b;">  → 删除，用 CanvasRenderer 替代</span>
+└── ...</pre>
+</div>
+
+<div class="section">
+  <h3>CanvasTheme — 设计系统的代码化身</h3>
+  <pre style="background:#ffffff06;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6;"><span style="color:#94a3b8;">// 所有视觉参数集中于此，CSS 变量从此文件生成</span>
+export const theme = {
+  bg: { void: '#05050d', deep: '#08081a' },
+  hierarchy: {
+    l0: { glowRadiusMul: 14, bloomAlpha: 0.04, coreAlpha: 1.0 },
+    l1: { glowRadiusMul: 8,  bloomAlpha: 0.02, coreAlpha: 0.85 },
+    l2: { glowRadiusMul: 5,  bloomAlpha: 0.01, coreAlpha: 0.6 },
+    l3: { glowRadiusMul: 2,  bloomAlpha: 0,    coreAlpha: '*' },
+  },
+  animation: {
+    masterBpm: 12,
+    emergeDuration: 1.2, lingerDuration: 3.5, crystallizeDuration: 1.0,
+    energyDot: { baseSpeed: 0.0004, bidirectional: true, easeCurve: 'easeInOutQuad' },
+    connection: { pulseFreq: 0.8, pulseAmp: 0.3 },
+  },
+  depth: {
+    atmosphericBlueShift: 0.15,
+    vignetteEdgeAlpha: 0.85,
+    maxParallaxFactor: 0.3,
+  },
+  colors: {
+    starTemp: { cool: { r:180,g:200,b:255 }, warm: { r:255,g:220,b:100 } },
+    groups: { /* 现有 groupColors, 集中管理 */ },
+  },
+} as const;</pre>
+</div>
+
+<div class="section">
+  <h3>CanvasRenderer — 统一渲染管线</h3>
+  <p>一个类，两个页面通过不同配置实例化：</p>
+  <pre style="background:#ffffff06;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6;"><span style="color:#94a3b8;">// LivingSpace 页面用</span>
+const renderer = new CanvasRenderer(canvas, {
+  mode: 'explore',     <span style="color:#64748b;">// 可平移缩放、点选星体</span>
+  systems: ['background', 'constellation', 'voidGate', 'whispers', 'meteors'],
+});
+
+<span style="color:#94a3b8;">// Void Chat 页面用</span>
+const voidRenderer = new CanvasRenderer(canvas, {
+  mode: 'ambient',     <span style="color:#64748b;">// 仅背景氛围，不可交互</span>
+  systems: ['background', 'constellation'],
+  parallaxFollow: pointer, <span style="color:#64748b;">// 鼠标跟随视差</span>
+});</pre>
+  <p>内部渲染顺序：</p>
+  <ol style="font-size:14px;">
+    <li><strong>Clear</strong> → 填满 theme.bg.void</li>
+    <li><strong>L3 氛围层</strong> → 星云 → 银河 → 尘埃 → 背景星 → 流星</li>
+    <li><strong>L2 等待层</strong> → 未读 Fragment 星体（脉动环）</li>
+    <li><strong>L1 叙事层</strong> → 连接线 → <span style="color:#4ade80;">双向能量点</span> → 已读 Fragment 星体</li>
+    <li><strong>Whispers</strong> → 飞行文本轨迹</li>
+    <li><strong>L0 焦点层</strong> → Void Gate → 当前交互高亮</li>
+    <li><strong>Post</strong> → Vignette → 大气透视叠加</li>
+  </ol>
+</div>
+
+<div class="section">
+  <h3>AnimationTimeline — 叙事时间线</h3>
+  <p>替代分散的 sin/cos 自由脉冲，用有结构的时间线驱动动画：</p>
+  <pre style="background:#ffffff06;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6;">class AnimationTimeline {
+  masterBeat: number;  <span style="color:#64748b;">// 全局拍子计数，按 BPM 推进</span>
+  phase: 'intro' | 'settle' | 'explore' | 'revelation';
+
+  <span style="color:#64748b;">// 双向能量点融入叙事：</span>
+  <span style="color:#64748b;">//   intro 阶段：慢速，从 void-entry 向外扩散</span>
+  <span style="color:#64748b;">//   explore 阶段：双向全速流动，表达星体间的相互映照</span>
+  <span style="color:#64748b;">//   revelation 阶段：所有能量点加速汇聚向中心</span>
+
+  getEnergyDotSpeed(phase): number;
+  getConnectionPulse(phase): number;
+  getStarBreathAmplitude(phase): number;
+}</pre>
+</div>
+
+<div class="section">
+  <h3>迁移策略：渐进替换</h3>
+  <p>不搞大爆炸式重写。三步走：</p>
+  <table style="width:100%;border-collapse:collapse;">
+    <tr style="color:#94a3b8;font-size:13px;"><th style="text-align:left;padding:6px;">步</th><th style="text-align:left;padding:6px;">内容</th><th style="text-align:left;padding:6px;">风险</th></tr>
+    <tr><td style="padding:6px;font-weight:600;">1</td><td style="padding:6px;">建立 CanvasTheme + AnimationTimeline，让现有模块引用它们。不改变渲染逻辑，只改变参数来源。</td><td style="padding:6px;color:#4ade80;">低</td></tr>
+    <tr style="background:#ffffff06;"><td style="padding:6px;font-weight:600;">2</td><td style="padding:6px;">创建 CanvasRenderer 类，将 LivingSpace.svelte 的渲染循环迁移进去。Void 页开始使用 CanvasRenderer。此时两页已经共享引擎。</td><td style="padding:6px;color:#fbbf24;">中</td></tr>
+    <tr><td style="padding:6px;font-weight:600;">3</td><td style="padding:6px;">实施视觉层级 L0-L3 的重设计调整（亮度、光晕半径、动画行为）。删除 StarBackground.svelte 和 Constellation.svelte。</td><td style="padding:6px;color:#fbbf24;">中</td></tr>
+  </table>
+  <p style="margin-top:12px;">每一步都有可验证的视觉输出，你可以在每一步之后看效果、给反馈。</p>
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:#ffffff08;border-radius:8px;">
+  <p style="margin:0;"><strong>这个架构设计和渐进迁移策略可以吗？</strong></p>
+  <p style="margin:8px 0 0 0;color:#94a3b8;">特别关注：模块划分是否合理？三步渐进替换是否可接受？</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="good" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>架构OK，继续</h3>
+      <p>模块划分合理，渐进策略可行</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">△</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>有具体的架构或策略修改意见</p>
+    </div>
+  </div>
+</div>

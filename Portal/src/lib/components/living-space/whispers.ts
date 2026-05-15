@@ -1,7 +1,8 @@
 import type { Whisper, EmergingFrag } from "./types";
 import { easeInOutQuad } from "./render-utils";
+import { theme } from "$lib/canvas/theme";
 
-export const WHISPER_DURATION = 3.5;
+export const WHISPER_DURATION = theme.whispers.duration;
 
 export function updateWhispers(
   whispers: Whisper[],
@@ -44,18 +45,19 @@ export function drawWhispers(
     const wx = w.sx + (w.tx - w.sx) * t;
     const wy = w.sy + (w.ty - w.sy) * t;
 
+    const ws = theme.whispers;
     const alpha =
-      w.progress < 0.08
-        ? w.progress / 0.08
-        : w.progress > 0.85
-          ? (1 - w.progress) / 0.15
+      w.progress < ws.fadeInThreshold
+        ? w.progress / ws.fadeInThreshold
+        : w.progress > ws.fadeOutThreshold
+          ? (1 - w.progress) / (1 - ws.fadeOutThreshold)
           : 1;
-    const a = alpha * 0.85;
+    const a = alpha * ws.alpha;
 
     const angle = Math.atan2(w.ty - w.sy, w.tx - w.sx);
 
     // Long sweeping trail
-    const trailLen = 160;
+    const trailLen = ws.trailLength;
     const tx1 = wx - Math.cos(angle) * trailLen;
     const ty1 = wy - Math.sin(angle) * trailLen;
     const trailGrad = ctx.createLinearGradient(wx, wy, tx1, ty1);
@@ -69,11 +71,11 @@ export function drawWhispers(
     ctx.moveTo(wx, wy);
     ctx.lineTo(tx1, ty1);
     ctx.strokeStyle = trailGrad;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = ws.lineWidth;
     ctx.stroke();
 
     // Bright core at head
-    const coreR = 30;
+    const coreR = ws.coreRadius;
     const pg = ctx.createRadialGradient(wx, wy, 0, wx, wy, coreR);
     pg.addColorStop(0, `rgba(255,255,255,${a})`);
     pg.addColorStop(
@@ -91,7 +93,7 @@ export function drawWhispers(
     ctx.fill();
 
     // Spark particles along trail
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < ws.sparkCount; i++) {
       const sparkDist = (i + 1) * 0.2 * trailLen;
       const sx = wx - Math.cos(angle) * sparkDist;
       const sy = wy - Math.sin(angle) * sparkDist;

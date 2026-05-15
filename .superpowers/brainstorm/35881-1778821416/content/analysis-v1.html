@@ -1,0 +1,95 @@
+<h2>页面效果问题诊断报告</h2>
+<p class="subtitle">基于代码审查，我发现了以下 6 类潜在问题。请浏览后告诉我哪些最符合你的感受。</p>
+
+<div class="section">
+  <h3>1. 视觉元素过载</h3>
+  <p>每个 Chunk 800 颗星（dust/field/beacon），多 Chunk 同时可见意味着数千颗星。再加上：8 个星云、银河带、宇宙尘埃、流星、连接线、能量点、Fragment 星体、Void Gate、Whisper 轨迹、Cross Flare……所有元素同时渲染，缺乏分层和视觉优先级。</p>
+  <div class="pros-cons">
+    <div class="cons"><h4>症状</h4><ul><li>画面看起来很"忙"，不知道看哪里</li><li>背景星和前景星座争夺注意力</li><li>能量点和连接线的运动让人分心</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. 颜色一致性问题</h3>
+  <p>Canvas 背景使用 <code>#04040a</code>，但 CSS 主题定义的是 <code>#0a0a0f</code>，存在不一致。Connection lines 的 outer glow 使用 8px 线宽但 alpha 很低（0.035-0.11），导致连线看起来像模糊的色块而非清晰的星座线。</p>
+  <div class="pros-cons">
+    <div class="cons"><h4>症状</h4><ul><li>暗部层次不够丰富</li><li>连线缺乏锐利感，油腻模糊</li><li>多种颜色（蓝/紫/粉/金/白）混在一起缺乏主次</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. 动画节奏混乱</h3>
+  <p>近期 commit 添加了多个叠加动画：Connection line pulse（sine 0.7-1.0）, Energy dot pulse（sine 2.5Hz）, Star breath（0.5Hz）, Unread star pulse（2.5Hz）, Cross flare pulse（1.5Hz）。不同频率的脉冲叠加在一起可能产生不和谐的节奏。</p>
+  <div class="pros-cons">
+    <div class="cons"><h4>症状</h4><ul><li>同时看到多个元素以不同节奏闪烁</li><li>动画缺乏统一的韵律感</li><li>能量点的缓动曲线让其忽快忽慢</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>4. 缺乏视觉层级和焦点</h3>
+  <p>所有 Fragment 星体使用相同的光晕渲染（super-outer bloom + outer halo + mid halo + inner glow），没有通过大小、亮度或颜色区分主次。void-entry 节点虽然特殊，但在视觉上与其他星体平权。</p>
+  <div class="pros-cons">
+    <div class="cons"><h4>症状</h4><ul><li>观众不知道应该先看哪里</li><li>重要星体和普通星体视觉平等</li><li>缺乏引导视线的视觉线索</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>5. 暗色背景缺乏深度</h3>
+  <p>Vignette 效果从 75% 才开始有明显的黑色过渡，画面中心和边缘对比不够。背景色 <code>#04040a</code> 几乎纯黑，但星云和银河的 opacity 只有 0.004-0.03，在深色背景上几乎不可见，无法营造空间纵深感。</p>
+  <div class="pros-cons">
+    <div class="cons"><h4>症状</h4><ul><li>星空看起来像"平面贴图"而非立体空间</li><li>星云和银河被深色背景吞没</li><li>缺乏深邃宇宙的沉浸感</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>6. Void Chat 页面的 CSS 通配符问题</h3>
+  <p><code>app.css</code> 中的 <code>* { transition-timing-function: ... }</code> 规则对所有元素生效，可能导致 Void Chat 页面的布局变化出现意外的过渡动画，造成拖影或延迟感。</p>
+  <div class="pros-cons">
+    <div class="cons"><h4>症状</h4><ul><li>页面元素切换时有不自然的过渡</li><li>消息出现时有拖尾或延迟</li></ul></div>
+  </div>
+</div>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="overload" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>视觉元素过载</h3>
+      <p>画面太拥挤，东西太多</p>
+    </div>
+  </div>
+  <div class="option" data-choice="color" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>颜色/连线质量问题</h3>
+      <p>配色不协调，连线模糊</p>
+    </div>
+  </div>
+  <div class="option" data-choice="rhythm" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>动画节奏问题</h3>
+      <p>闪烁节奏不和谐</p>
+    </div>
+  </div>
+  <div class="option" data-choice="hierarchy" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>缺乏视觉层级</h3>
+      <p>不知道看哪里，没焦点</p>
+    </div>
+  </div>
+  <div class="option" data-choice="depth" onclick="toggleSelect(this)">
+    <div class="letter">5</div>
+    <div class="content">
+      <h3>空间深度不足</h3>
+      <p>星空缺乏立体感和沉浸感</p>
+    </div>
+  </div>
+  <div class="option" data-choice="css" onclick="toggleSelect(this)">
+    <div class="letter">6</div>
+    <div class="content">
+      <h3>CSS 过渡异常</h3>
+      <p>页面元素切换有拖影</p>
+    </div>
+  </div>
+</div>

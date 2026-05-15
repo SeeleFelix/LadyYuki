@@ -3,26 +3,20 @@
   import { browser } from "$app/environment";
   import { areas, connections } from "$lib/data/constellation";
   import { getFragmentById } from "$lib/data/fragments";
+  import { theme } from "$lib/canvas/theme";
   import type { SpaceStar } from "$lib/types/space";
   import type { Fragment } from "$lib/types/agent";
   import type { Locale } from "$lib/i18n/detector";
 
   import {
-    drawVoidGate,
-    drawIgnition,
     createIgnitionSystem,
     updateIgnition,
     spawnIgnitionBurst,
     type IgnitionSystem,
   } from "./living-space/void-gate";
   import {
-    drawBgStars,
-    drawNebulas,
-    drawMilkyWay,
     spawnShootingStar,
     updateShootingStars,
-    drawShootingStars,
-    drawDusts,
     updateActiveChunks,
     CHUNK_SIZE,
   } from "./living-space/background";
@@ -31,17 +25,10 @@
     buildConnData,
     createEDots,
     updateEmergence,
-    drawConnectionLines,
-    drawEDots,
-    drawFragmentStars,
   } from "./living-space/constellation";
-  import {
-    drawWhispers,
-    updateWhispers,
-    WHISPER_DURATION,
-  } from "./living-space/whispers";
+  import { updateWhispers, WHISPER_DURATION } from "./living-space/whispers";
   import { triggerResonance, updateResonances } from "./living-space/resonance";
-  import { drawVignette, drawClickRipple } from "./living-space/render-utils";
+  import { CanvasRenderer, type FrameState } from "$lib/canvas/renderer";
   import {
     createCamera,
     updateCamera,
@@ -103,7 +90,7 @@
 
   let whispers: Whisper[] = $state([]);
 
-  const OPENING_TEXT = "她在诉说。";
+  const OPENING_TEXT = theme.opening.text;
   let openingPhase = $state<"idle" | "typing" | "hold" | "fading">("idle");
   let openingTextAlpha = $state(0);
   let openingTextScreen = $state({ x: 0, y: 0 });
@@ -113,6 +100,9 @@
   let nextWhisperTime = $state(Infinity);
 
   const WHISPER_INTERVAL = 10;
+
+  // ── Renderer ──
+  let renderer: CanvasRenderer;
 
   // ── Non-reactive state ──
   let bootTime = 0;
@@ -154,6 +144,8 @@
     ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    renderer = new CanvasRenderer(canvas, { mode: "explore" });
+
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
@@ -182,8 +174,12 @@
       openingPhase = "typing";
       openingRevealIdx = 1;
       openingRevealTimer = 0;
-    }, 1500);
-    firstWhisperTime = bootTime + 9;
+    }, theme.opening.initialDelay * 1000);
+    firstWhisperTime =
+      bootTime +
+      theme.opening.awakenStartDelay +
+      theme.opening.awakenDuration +
+      0.5;
 
     animate();
   });
@@ -203,16 +199,8 @@
   // ── Nebula creation ──
   function createNebulas() {
     nebulas = [];
-    const colors = [
-      { r: 139, g: 92, b: 246 },
-      { r: 59, g: 130, b: 246 },
-      { r: 236, g: 72, b: 153 },
-      { r: 99, g: 102, b: 241 },
-      { r: 6, g: 182, b: 212 },
-      { r: 180, g: 130, b: 255 },
-      { r: 255, g: 180, b: 100 },
-    ];
-    for (let i = 0; i < 8; i++) {
+    const colors = theme.background.nebulaColors;
+    for (let i = 0; i < theme.background.nebulaCount; i++) {
       const area = areas[i % areas.length];
       nebulas.push({
         bx: (area?.centerX ?? -300) + (Math.random() - 0.5) * 200,
@@ -278,7 +266,10 @@
   function updateOpeningText() {
     if (openingPhase === "typing") {
       openingRevealTimer += 1 / 60;
-      if (openingRevealTimer >= 1.0 && openingRevealIdx < OPENING_TEXT.length) {
+      if (
+        openingRevealTimer >= theme.opening.charDelay &&
+        openingRevealIdx < OPENING_TEXT.length
+      ) {
         openingRevealIdx++;
         openingRevealTimer = 0;
       }
@@ -290,13 +281,16 @@
     } else if (openingPhase === "hold") {
       openingRevealTimer += 1 / 60;
       openingTextAlpha = 1;
-      if (openingRevealTimer >= 1.5) {
+      if (openingRevealTimer >= theme.opening.holdDuration) {
         openingPhase = "fading";
         openingRevealTimer = 0;
       }
     } else if (openingPhase === "fading") {
       openingRevealTimer += 1 / 60;
-      openingTextAlpha = Math.max(0, 1 - openingRevealTimer / 2.5);
+      openingTextAlpha = Math.max(
+        0,
+        1 - openingRevealTimer / theme.opening.fadeDuration,
+      );
       if (openingTextAlpha <= 0) openingPhase = "idle";
     }
   }
@@ -447,11 +441,6 @@
         (cam.driftTarget.y - cam.viewport.targetY) * driftForce;
     }
 
-    // Clear
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#04040a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     // Chunk update
     if (
       Math.abs(cam.viewport.x - lastChunkUpdateX) > 300 ||
@@ -470,16 +459,6 @@
 
     // Ignition update
     updateIgnition(ignitionSys, 1 / 60);
-    const shakeX = Math.sin(time * 55) * ignitionSys.shake;
-    const shakeY = Math.cos(time * 48) * ignitionSys.shake;
-
-    // World transform
-    ctx.save();
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
-    ctx.translate(cx, cy);
-    ctx.scale(cam.viewport.zoom, cam.viewport.zoom);
-    ctx.translate(-cam.viewport.x - shakeX, -cam.viewport.y - shakeY);
 
     // Shooting stars
     if (nextShootingStarTime === Infinity && ignitionAge >= 0.3)
@@ -500,57 +479,52 @@
           ? 0.45 + (ignitionAge / 5) * 0.55
           : 1.0 + Math.min(readCount / 16, 1) * 0.1 + revelationPulse * 0.5;
 
-    // Draw calls
-    drawNebulas(ctx, time, fieldBrightness, nebulas, cam.viewport, canvas);
-    drawMilkyWay(ctx, fieldBrightness, cam.viewport, canvas);
-    drawDusts(ctx, time, activeChunks, chunkCache, CHUNK_SIZE);
-    const rawAwaken = Math.max(0, Math.min(1, (time - bootTime - 3.5) / 5));
+    const rawAwaken = Math.max(
+      0,
+      Math.min(
+        1,
+        (time - bootTime - theme.opening.awakenStartDelay) /
+          theme.opening.awakenDuration,
+      ),
+    );
     const awakenProgress = 1 - (1 - rawAwaken) * (1 - rawAwaken);
-    drawBgStars(
-      ctx,
-      time,
-      fieldBrightness,
-      ignitionAge,
-      awakenProgress,
-      revelationPulse,
-      emergingFrags,
-      activeChunks,
-      chunkCache,
-      cam.viewport,
-      canvas,
-    );
-    drawShootingStars(ctx, shootingStars);
-    drawConnectionLines(ctx, connData, time);
-    drawEDots(ctx, eDots, connData, time);
-    drawFragmentStars(ctx, emergingFrags, resonances, time);
-    drawIgnition(
-      ctx,
-      emergingFrags,
-      ignitionAge,
-      ignitionSys.particles,
-      cam.viewport,
-      canvas,
-    );
-    drawVoidGate(
-      ctx,
-      emergingFrags,
-      ignitionAge,
-      time,
-      inputState.mouseSpaceX,
-      inputState.mouseSpaceY,
-      cam.viewport,
-      canvas,
-      readCount,
-    );
-    drawWhispers(ctx, whispers, time);
 
-    // Click ripple
-    drawClickRipple(ctx, rippleX, rippleY, rippleAge, RIPPLE_DURATION);
+    // Ripple update
     if (rippleAge < RIPPLE_DURATION) rippleAge += 1 / 60;
 
-    // Restore + vignette
-    ctx.restore();
-    drawVignette(ctx, canvas.width, canvas.height);
+    // Unified render
+    const shakeX = Math.sin(time * 55) * ignitionSys.shake;
+    const shakeY = Math.cos(time * 48) * ignitionSys.shake;
+    const shakenViewport = {
+      ...cam.viewport,
+      x: cam.viewport.x + shakeX,
+      y: cam.viewport.y + shakeY,
+    };
+
+    renderer.render(
+      {
+        time,
+        fieldBrightness,
+        ignitionAge,
+        awakenProgress,
+        revelationPulse,
+        readCount,
+        mouseSpaceX: inputState.mouseSpaceX,
+        mouseSpaceY: inputState.mouseSpaceY,
+        viewport: shakenViewport,
+        emergingFrags,
+        connData,
+        eDots,
+        resonances,
+        whispers,
+        nebulas,
+        shootingStars,
+        ignitionParticles: ignitionSys.particles,
+        activeChunks,
+        chunkCache,
+      },
+      { x: rippleX, y: rippleY, age: rippleAge },
+    );
 
     animationFrameId = requestAnimationFrame(animate);
   }

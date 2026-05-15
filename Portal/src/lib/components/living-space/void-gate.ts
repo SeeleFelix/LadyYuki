@@ -1,5 +1,6 @@
 import type { EmergingFrag, IgnitionParticle } from "./types";
 import type { SpaceViewport } from "$lib/types/space";
+import { theme } from "$lib/canvas/theme";
 
 // ══════════════════════════════════════════
 //  Ignition system — particle burst + shake
@@ -21,7 +22,7 @@ export function updateIgnition(sys: IgnitionSystem, dt: number): void {
     p.life -= dt;
   }
   sys.particles = sys.particles.filter((p) => p.life > 0);
-  sys.shake = Math.max(0, sys.shake - dt * 40);
+  sys.shake = Math.max(0, sys.shake - dt * theme.ignition.shake.decay);
 }
 
 export function spawnIgnitionBurst(
@@ -29,24 +30,24 @@ export function spawnIgnitionBurst(
   x: number,
   y: number,
 ): void {
-  sys.shake = 18;
-  const colors = [
-    { r: 220, g: 210, b: 255 },
-    { r: 180, g: 160, b: 240 },
-    { r: 255, g: 255, b: 255 },
-    { r: 160, g: 180, b: 255 },
-    { r: 200, g: 180, b: 240 },
-  ];
-  for (let i = 0; i < 30; i++) {
+  const ign = theme.ignition;
+  sys.shake = ign.shake.initial;
+  const colors = ign.particleColors;
+  for (let i = 0; i < ign.particleCount; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 400 + Math.random() * 900;
+    const speed =
+      ign.particleSpeed[0] +
+      Math.random() * (ign.particleSpeed[1] - ign.particleSpeed[0]);
+    const lifeVal =
+      ign.particleLife[0] +
+      Math.random() * (ign.particleLife[1] - ign.particleLife[0]);
     sys.particles.push({
       x,
       y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 0.3 + Math.random() * 0.5,
-      maxLife: 0.3 + Math.random() * 0.5,
+      life: lifeVal,
+      maxLife: lifeVal,
       color: colors[Math.floor(Math.random() * colors.length)],
     });
   }
@@ -319,9 +320,10 @@ export function drawIgnition(
   const maxDim = Math.max(canvas.width, canvas.height) / viewport.zoom;
 
   // Center flash
-  if (t < 0.25) {
-    const flashA = (1 - t / 0.25) * 0.9;
-    const flashR = maxDim * 0.8;
+  const flashCfg = theme.ignition.flash;
+  if (t < flashCfg.duration) {
+    const flashA = (1 - t / flashCfg.duration) * flashCfg.maxAlpha;
+    const flashR = maxDim * flashCfg.radiusMul;
     const fg = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashR);
     fg.addColorStop(0, `rgba(255,255,255,${flashA})`);
     fg.addColorStop(0.04, `rgba(220,210,255,${flashA * 0.5})`);
@@ -333,12 +335,14 @@ export function drawIgnition(
 
   // Shockwave rings
   const waveSpeed = maxDim / 5;
-  const RING_COUNT = 5;
+  const RING_COUNT = theme.ignition.shockwave.ringCount;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < RING_COUNT; i++) {
-    const startT = 0.05 + i * 0.15;
-    const ringLife = 4;
+    const startT =
+      theme.ignition.shockwave.startOffset +
+      i * theme.ignition.shockwave.spacing;
+    const ringLife = theme.ignition.shockwave.ringLife;
     if (t < startT || t > startT + ringLife) continue;
     const age = t - startT;
     const ringProgress = age / ringLife;
@@ -346,7 +350,7 @@ export function drawIgnition(
     const ringR = eased * waveSpeed * ringLife;
     const intensity =
       age < 0.3 ? age / 0.3 : 1 - (age - 0.3) / (ringLife - 0.3);
-    const a = intensity * 0.75;
+    const a = intensity * theme.ignition.shockwave.maxIntensity;
 
     // Outer glow
     ctx.beginPath();

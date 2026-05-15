@@ -1,9 +1,7 @@
-export { default as StarBackground } from "./StarBackground.svelte";
 export { default as LivingSpace } from "./LivingSpace.svelte";
 export { default as StarContent } from "./StarContent.svelte";
 export { default as LightInput } from "./LightInput.svelte";
 export { default as SpaceText } from "./SpaceText.svelte";
-export { default as Constellation } from "./Constellation.svelte";
 export { default as DialogueBubble } from "./DialogueBubble.svelte";
 export { default as VoidMessage } from "./VoidMessage.svelte";
 export { default as InputArea } from "./InputArea.svelte";

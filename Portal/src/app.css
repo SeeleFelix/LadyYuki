@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Custom dark theme for SeeleFelix */
+/* Custom dark theme for SeeleFelix — values synced with canvas/theme.ts */
 :root {
-  --color-deep-black: #0a0a0f;
+  --color-deep-black: #05050d;
   --color-star-white: #ffffff;
   --color-star-glow: rgba(255, 255, 255, 0.8);
   --color-constellation-line: rgba(100, 149, 237, 0.4);
@@ -31,11 +31,6 @@ body {
 
 body.immersive {
   overflow: hidden;
-}
-
-/* Smooth transitions for state changes */
-* {
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Custom scrollbar */
