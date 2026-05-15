@@ -28,6 +28,7 @@ export interface EmergingFrag {
   screenX: number;
   screenY: number;
   textAlpha: number;
+  zDepth: number;
 }
 
 // ── Whispers ──

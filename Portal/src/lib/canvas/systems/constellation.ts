@@ -154,6 +154,7 @@ export function generateEmergingFrags(locale: Locale): {
     screenX: 0,
     screenY: 0,
     textAlpha: 0,
+    zDepth: 0.3 + Math.random() * 0.7,
   }));
   const emergeQueue = emergingFrags.filter((f) => f.starId !== "void-entry");
   const voidNode = emergingFrags.find((f) => f.starId === "void-entry");
