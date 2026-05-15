@@ -291,7 +291,7 @@ export function drawBgStars(
         time * s.twinkleSpeed * twitchSpd + s.twinklePhase,
       );
       const baseRange =
-        s.type === "dust" ? 0.15 : s.type === "beacon" ? 0.35 : 0.3;
+        s.type === "dust" ? 0.1 : s.type === "beacon" ? 0.25 : 0.2;
       const twinkleRange = baseRange * twitchAmp;
       let a =
         s.opacity *
@@ -327,7 +327,7 @@ export function drawBgStars(
       } else if (s.type === "field") {
         ctx.beginPath();
         ctx.arc(s.wx, s.wy, sz * 3, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${a * 0.04})`;
+        ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${a * 0.02})`;
         ctx.fill();
         ctx.beginPath();
         ctx.arc(s.wx, s.wy, sz, 0, Math.PI * 2);
@@ -337,7 +337,7 @@ export function drawBgStars(
         const cs = sz;
         const oR = cs * 6;
         const og = ctx.createRadialGradient(s.wx, s.wy, cs, s.wx, s.wy, oR);
-        og.addColorStop(0, `rgba(${col.r},${col.g},${col.b},${a * 0.15})`);
+        og.addColorStop(0, `rgba(${col.r},${col.g},${col.b},${a * 0.1})`);
         og.addColorStop(0.6, `rgba(${col.r},${col.g},${col.b},${a * 0.03})`);
         og.addColorStop(1, "rgba(0,0,0,0)");
         ctx.beginPath();
