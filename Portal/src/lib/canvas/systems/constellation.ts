@@ -11,7 +11,6 @@ import { getFragmentById } from "$lib/data/fragments";
 import { groupColors, getStarById } from "$lib/data/constellation";
 import { theme } from "$lib/canvas/theme";
 import {
-  getEnergyDotDirection,
   getEnergyDotSpeedMul,
   getConnectionPulseMul,
   getStarBreathMul,
@@ -203,7 +202,7 @@ export function createEDots(
       const baseSpeed =
         cDots.baseSpeed[0] +
         Math.random() * (cDots.baseSpeed[1] - cDots.baseSpeed[0]);
-      const direction = getEnergyDotDirection(phase, j);
+      const direction = j % 2 === 0 ? 1 : -1;
       const speed = baseSpeed * direction * getEnergyDotSpeedMul(phase);
       result.push({
         connIdx: i,
