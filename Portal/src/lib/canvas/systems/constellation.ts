@@ -10,6 +10,11 @@ import type { Locale } from "$lib/i18n/detector";
 import { getFragmentById } from "$lib/data/fragments";
 import { groupColors, getStarById } from "$lib/data/constellation";
 import { theme } from "$lib/canvas/theme";
+import {
+  getEnergyDotDirection,
+  getEnergyDotSpeedMul,
+  type TimelinePhase,
+} from "../timeline";
 import { getHierarchyConfig, type HierarchyTier } from "../primitives/stars";
 
 const cEmergence = theme.constellation.emergence;
@@ -182,7 +187,10 @@ export function buildConnData(
   return result;
 }
 
-export function createEDots(connData: ConnData[]): EDot[] {
+export function createEDots(
+  connData: ConnData[],
+  phase: TimelinePhase = "explore",
+): EDot[] {
   const result: EDot[] = [];
   connData.forEach((cd, i) => {
     const count = cd.isInterGroup
@@ -192,11 +200,12 @@ export function createEDots(connData: ConnData[]): EDot[] {
       const baseSpeed =
         cDots.baseSpeed[0] +
         Math.random() * (cDots.baseSpeed[1] - cDots.baseSpeed[0]);
-      const direction = cDots.bidirectional && j % 2 === 0 ? 1 : -1;
+      const direction = getEnergyDotDirection(phase, j);
+      const speed = baseSpeed * direction * getEnergyDotSpeedMul(phase);
       result.push({
         connIdx: i,
         progress: Math.random(),
-        speed: baseSpeed * direction,
+        speed,
         size: cDots.size[0] + Math.random() * (cDots.size[1] - cDots.size[0]),
         alpha:
           cDots.alpha[0] + Math.random() * (cDots.alpha[1] - cDots.alpha[0]),

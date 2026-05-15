@@ -4,6 +4,12 @@
   import { areas, connections } from "$lib/data/constellation";
   import { getFragmentById } from "$lib/data/fragments";
   import { theme } from "$lib/canvas/theme";
+  import {
+    createTimeline,
+    updateTimeline,
+    type TimelinePhase,
+    type TimelineState,
+  } from "$lib/canvas/timeline";
   import type { SpaceStar } from "$lib/types/space";
   import type { Fragment } from "$lib/types/agent";
   import type { Locale } from "$lib/i18n/detector";
@@ -129,6 +135,7 @@
 
   let eDots: EDot[] = [];
   let connData: ConnData[] = [];
+  let timeline: TimelineState = createTimeline();
 
   let pendingWhisper: PendingWhisper | null = null;
 
@@ -172,7 +179,7 @@
     emergeQueue = fragResult.emergeQueue;
     cam = createCamera(fragResult.voidX, fragResult.voidY);
     connData = buildConnData(emergingFrags, connections);
-    eDots = createEDots(connData);
+    eDots = createEDots(connData, timeline.phase);
     ignitionSys = createIgnitionSystem();
 
     bootTime = performance.now() / 1000;
@@ -499,6 +506,7 @@
     if (rippleAge < RIPPLE_DURATION) rippleAge += 1 / 60;
 
     // Unified render
+    updateTimeline(timeline, time, readCount);
     const shakeX = Math.sin(time * 55) * ignitionSys.shake;
     const shakeY = Math.cos(time * 48) * ignitionSys.shake;
     const shakenViewport = {
