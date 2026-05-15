@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
+  import { browser } from "$app/environment";
 
   let { children } = $props();
 
   onMount(() => {
     document.body.classList.add("immersive");
-  });
-
-  onDestroy(() => {
-    document.body.classList.remove("immersive");
+    return () => {
+      document.body.classList.remove("immersive");
+    };
   });
 </script>
 
