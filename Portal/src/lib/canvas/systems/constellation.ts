@@ -10,6 +10,7 @@ import type { Locale } from "$lib/i18n/detector";
 import { getFragmentById } from "$lib/data/fragments";
 import { groupColors, getStarById } from "$lib/data/constellation";
 import { theme } from "$lib/canvas/theme";
+import { getHierarchyConfig, type HierarchyTier } from "../primitives/stars";
 
 const cEmergence = theme.constellation.emergence;
 const cConn = theme.constellation.connection;
@@ -395,14 +396,22 @@ export function drawFragmentStars(
     const cs = ef.size * breath * crystalScale * (1 + (resBoost - 1) * 0.3);
     if (crystalScale < 0.01) continue;
 
+    const tier: HierarchyTier =
+      ef.read && ef.phase === "star"
+        ? "l1"
+        : !ef.read && ef.phase === "star"
+          ? "l2"
+          : "l3";
+    const hc = getHierarchyConfig(tier);
     const halo = cStars.halo;
+    const scaleMul = hc.glowRadiusMul / 8; // normalize against L1 baseline of 8
 
     // Super-outer bloom
-    const soR = cs * halo.superOuterBloom;
+    const soR = cs * halo.superOuterBloom * scaleMul;
     const sog = ctx.createRadialGradient(ef.x, ef.y, cs * 5, ef.x, ef.y, soR);
     sog.addColorStop(
       0,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * 0.02 * proxBoost})`,
+      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * hc.bloomAlpha * proxBoost})`,
     );
     sog.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();
@@ -411,15 +420,15 @@ export function drawFragmentStars(
     ctx.fill();
 
     // Outer halo
-    const oR = cs * halo.outerHalo;
+    const oR = cs * halo.outerHalo * scaleMul;
     const og = ctx.createRadialGradient(ef.x, ef.y, cs * 2, ef.x, ef.y, oR);
     og.addColorStop(
       0,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * 0.08 * proxBoost})`,
+      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${((eff * 0.08 * hc.coreAlpha) / 0.85) * proxBoost})`,
     );
     og.addColorStop(
       0.5,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * 0.03 * proxBoost})`,
+      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${((eff * 0.03 * hc.coreAlpha) / 0.85) * proxBoost})`,
     );
     og.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();
@@ -428,15 +437,15 @@ export function drawFragmentStars(
     ctx.fill();
 
     // Mid halo
-    const mR = cs * halo.midHalo;
+    const mR = cs * halo.midHalo * scaleMul;
     const mg = ctx.createRadialGradient(ef.x, ef.y, cs, ef.x, ef.y, mR);
     mg.addColorStop(
       0,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * 0.5 * proxBoost})`,
+      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${((eff * 0.5 * hc.coreAlpha) / 0.85) * proxBoost})`,
     );
     mg.addColorStop(
       0.5,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * 0.12 * proxBoost})`,
+      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${((eff * 0.12 * hc.coreAlpha) / 0.85) * proxBoost})`,
     );
     mg.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();
@@ -445,15 +454,15 @@ export function drawFragmentStars(
     ctx.fill();
 
     // Inner glow
-    const igR = cs * halo.innerGlow;
+    const igR = cs * halo.innerGlow * scaleMul;
     const igg = ctx.createRadialGradient(ef.x, ef.y, cs * 0.3, ef.x, ef.y, igR);
     igg.addColorStop(
       0,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * 0.65 * proxBoost})`,
+      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${((eff * 0.65 * hc.coreAlpha) / 0.85) * proxBoost})`,
     );
     igg.addColorStop(
       0.4,
-      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${eff * 0.3 * proxBoost})`,
+      `rgba(${ef.color.r},${ef.color.g},${ef.color.b},${((eff * 0.3 * hc.coreAlpha) / 0.85) * proxBoost})`,
     );
     igg.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();
@@ -462,7 +471,7 @@ export function drawFragmentStars(
     ctx.fill();
 
     // Unread ring
-    if (!ef.read && ef.phase === "star") {
+    if (hc.showUnreadRing && !ef.read && ef.phase === "star") {
       const ring = cStars.unreadRing;
       ctx.beginPath();
       ctx.arc(ef.x, ef.y, mR + ring.radiusOffset, 0, Math.PI * 2);
@@ -474,7 +483,7 @@ export function drawFragmentStars(
     // Core + inner point
     ctx.beginPath();
     ctx.arc(ef.x, ef.y, cs, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${eff})`;
+    ctx.fillStyle = `rgba(255,255,255,${eff * hc.coreAlpha})`;
     ctx.fill();
     ctx.beginPath();
     ctx.arc(ef.x, ef.y, cs * 0.4, 0, Math.PI * 2);
