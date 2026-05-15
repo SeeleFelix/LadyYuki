@@ -50,6 +50,11 @@
   let renderer: CanvasRenderer;
   let animationFrameId: number;
 
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
   $effect(() => {
     const unsub1 = visualStore.subscribe((v) => (currentVisualState = v));
     const unsub2 = conversationStore.subscribe(
@@ -67,6 +72,9 @@
     sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     localeStore.initialize();
     fetchOpeningQuestion();
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
 
     renderer = new CanvasRenderer(canvas, {
       mode: "ambient",
@@ -91,6 +99,7 @@
 
   onDestroy(() => {
     if (!browser) return;
+    window.removeEventListener("resize", resizeCanvas);
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
   });
 
