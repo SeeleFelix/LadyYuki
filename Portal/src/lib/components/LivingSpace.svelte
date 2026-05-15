@@ -13,21 +13,27 @@
     updateIgnition,
     spawnIgnitionBurst,
     type IgnitionSystem,
-  } from "./living-space/void-gate";
+  } from "$lib/canvas/systems/void-gate";
   import {
     spawnShootingStar,
     updateShootingStars,
     updateActiveChunks,
     CHUNK_SIZE,
-  } from "./living-space/background";
+  } from "$lib/canvas/systems/background";
   import {
     generateEmergingFrags,
     buildConnData,
     createEDots,
     updateEmergence,
-  } from "./living-space/constellation";
-  import { updateWhispers, WHISPER_DURATION } from "./living-space/whispers";
-  import { triggerResonance, updateResonances } from "./living-space/resonance";
+  } from "$lib/canvas/systems/constellation";
+  import {
+    updateWhispers,
+    WHISPER_DURATION,
+  } from "$lib/canvas/systems/whispers";
+  import {
+    triggerResonance,
+    updateResonances,
+  } from "$lib/canvas/systems/resonance";
   import { CanvasRenderer, type FrameState } from "$lib/canvas/renderer";
   import {
     createCamera,
@@ -37,8 +43,8 @@
     spaceToScreen,
     isAutoPanning,
     type CameraState,
-  } from "./living-space/camera";
-  import { createInput, type InputState } from "./living-space/input";
+  } from "$lib/canvas/systems/camera";
+  import { createInput, type InputState } from "$lib/canvas/systems/input";
   import type {
     EmergingFrag,
     Whisper,
@@ -49,7 +55,7 @@
     Nebula,
     ShootingStar,
     Chunk,
-  } from "./living-space/types";
+  } from "$lib/canvas/types";
 
   // ── Props ──
   interface Props {

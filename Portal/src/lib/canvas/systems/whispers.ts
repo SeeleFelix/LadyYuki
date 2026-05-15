@@ -1,5 +1,5 @@
-import type { Whisper, EmergingFrag } from "./types";
-import { easeInOutQuad } from "./render-utils";
+import type { Whisper, EmergingFrag } from "../types";
+import { easeInOutQuad } from "../theme";
 import { theme } from "$lib/canvas/theme";
 
 export const WHISPER_DURATION = theme.whispers.duration;

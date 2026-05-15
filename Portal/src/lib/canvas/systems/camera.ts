@@ -1,6 +1,6 @@
 import type { SpaceViewport } from "$lib/types/space";
-import type { AutoPanPhase, PendingWhisper, Whisper } from "./types";
-import { easeInOutQuad } from "./render-utils";
+import type { AutoPanPhase, PendingWhisper, Whisper } from "../types";
+import { easeInOutQuad } from "../theme";
 
 export interface CameraState {
   viewport: SpaceViewport;

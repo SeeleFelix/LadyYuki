@@ -1,4 +1,4 @@
-import type { EmergingFrag, Resonance } from "./types";
+import type { EmergingFrag, Resonance } from "../types";
 
 export const RESONANCE_DURATION = 2.0;
 

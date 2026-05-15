@@ -5,22 +5,17 @@ import {
   drawDusts,
   drawShootingStars,
   updateActiveChunks,
-} from "../components/living-space/background";
-import { drawMilkyWay } from "../components/living-space/background";
+} from "./systems/background";
+import { drawMilkyWay } from "./systems/background";
 import {
   drawConnectionLines,
   drawEDots,
   drawFragmentStars,
-} from "../components/living-space/constellation";
-import {
-  drawVoidGate,
-  drawIgnition,
-} from "../components/living-space/void-gate";
-import { drawWhispers } from "../components/living-space/whispers";
-import {
-  drawVignette,
-  drawClickRipple,
-} from "../components/living-space/render-utils";
+} from "./systems/constellation";
+import { drawVoidGate, drawIgnition } from "./systems/void-gate";
+import { drawWhispers } from "./systems/whispers";
+import { drawVignette } from "./primitives/atmosphere";
+import { drawClickRipple } from "./primitives/effects";
 import { drawAgentStar } from "./primitives/stars";
 import { drawAgentConnection } from "./primitives/connections";
 import type { Star } from "$lib/types/agent";
@@ -36,7 +31,7 @@ import type {
   Nebula,
   Chunk,
   IgnitionParticle,
-} from "../components/living-space/types";
+} from "./types";
 
 export type RendererMode = "explore" | "ambient";
 export type SystemName =

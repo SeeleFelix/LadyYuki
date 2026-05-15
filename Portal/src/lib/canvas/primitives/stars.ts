@@ -1,9 +1,5 @@
 import { theme } from "../theme";
-import type {
-  EmergingFrag,
-  Resonance,
-  BgStar,
-} from "../../components/living-space/types";
+import type { EmergingFrag, Resonance, BgStar } from "../types";
 import type { Star } from "$lib/types/agent";
 
 const cStars = theme.constellation.fragmentStars;

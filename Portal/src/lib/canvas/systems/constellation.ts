@@ -1,4 +1,10 @@
-import type { EmergingFrag, Whisper, Resonance, ConnData, EDot } from "./types";
+import type {
+  EmergingFrag,
+  Whisper,
+  Resonance,
+  ConnData,
+  EDot,
+} from "../types";
 import type { Fragment } from "$lib/types/agent";
 import type { Locale } from "$lib/i18n/detector";
 import { getFragmentById } from "$lib/data/fragments";

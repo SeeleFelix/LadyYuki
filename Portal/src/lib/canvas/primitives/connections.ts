@@ -1,9 +1,5 @@
 import { theme } from "../theme";
-import type {
-  EmergingFrag,
-  ConnData,
-  EDot,
-} from "../../components/living-space/types";
+import type { EmergingFrag, ConnData, EDot } from "../types";
 import type { Star } from "$lib/types/agent";
 
 const cConn = theme.constellation.connection;

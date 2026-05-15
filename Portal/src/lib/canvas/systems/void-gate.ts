@@ -1,4 +1,4 @@
-import type { EmergingFrag, IgnitionParticle } from "./types";
+import type { EmergingFrag, IgnitionParticle } from "../types";
 import type { SpaceViewport } from "$lib/types/space";
 import { theme } from "$lib/canvas/theme";
 

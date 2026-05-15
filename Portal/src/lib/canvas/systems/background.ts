@@ -1,6 +1,6 @@
-import type { BgStar, Dust, Chunk, Nebula, ShootingStar } from "./types";
+import type { BgStar, Dust, Chunk, Nebula, ShootingStar } from "../types";
 import type { SpaceViewport } from "$lib/types/space";
-import type { EmergingFrag } from "./types";
+import type { EmergingFrag } from "../types";
 import { theme, pseudoNoise } from "$lib/canvas/theme";
 import { applyAtmosphericPerspective } from "$lib/canvas/primitives/atmosphere";
 
