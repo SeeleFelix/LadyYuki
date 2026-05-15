@@ -238,6 +238,23 @@ function drawRing(
   ctx.arc(0, 0, cs * 2 * pulseBoost, 0, Math.PI * 2);
   ctx.fill();
 
+  // L0 bright center
+  const brightCore = ctx.createRadialGradient(
+    0,
+    0,
+    0,
+    0,
+    0,
+    cs * 0.8 * pulseBoost,
+  );
+  brightCore.addColorStop(0, `rgba(255,255,255,${0.6 * pulseBoost})`);
+  brightCore.addColorStop(0.5, `rgba(200,180,255,${0.2 * pulseBoost})`);
+  brightCore.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = brightCore;
+  ctx.beginPath();
+  ctx.arc(0, 0, cs * 0.8 * pulseBoost, 0, Math.PI * 2);
+  ctx.fill();
+
   // Fragmented ring
   const pulseR = ringR * pulseBoost;
   for (let i = 0; i < fragmentCount; i++) {
@@ -250,7 +267,7 @@ function drawRing(
 
     const fragBrightness =
       0.5 + breathCycle * 0.3 + Math.sin(time * 2 + i * 1.7) * 0.15;
-    const a = fragBrightness * 0.7 * pulseBoost;
+    const a = fragBrightness * 1.1 * pulseBoost;
 
     // Fragment glow
     ctx.beginPath();
@@ -275,13 +292,13 @@ function drawRing(
     const angle = (i / fragmentCount) * Math.PI * 2 + time * rotSpeed;
     const dotX = Math.cos(angle) * pulseR;
     const dotY = Math.sin(angle) * pulseR;
-    const dotA = 0.5 + breathCycle * 0.2;
+    const dotA = 0.8 + breathCycle * 0.3;
     const dg = ctx.createRadialGradient(dotX, dotY, 0, dotX, dotY, cs * 0.8);
     dg.addColorStop(0, `rgba(255,255,255,${dotA})`);
     dg.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = dg;
     ctx.beginPath();
-    ctx.arc(dotX, dotY, cs * 0.8, 0, Math.PI * 2);
+    ctx.arc(dotX, dotY, cs * 1.2, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -290,7 +307,7 @@ function drawRing(
   // Proximity glow from dark core
   if (prox > 0) {
     const pg = ctx.createRadialGradient(cx, cy, cs, cx, cy, ringR * 1.5);
-    pg.addColorStop(0, `rgba(140,120,200,${prox * 0.06})`);
+    pg.addColorStop(0, `rgba(140,120,200,${prox * 0.12})`);
     pg.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = pg;
     ctx.beginPath();
