@@ -119,6 +119,7 @@
   // ── Non-reactive state ──
   let bootTime = 0;
   let ignitionAge = 0;
+  let prevFrameTime = 0;
 
   let cam: CameraState = $state(createCamera(0, 0));
   let inputState!: InputState;
@@ -312,6 +313,8 @@
   function animate(now: number = 0) {
     if (!ctx) return;
     const time = now ? now / 1000 : performance.now() / 1000;
+    const dt = prevFrameTime > 0 ? time - prevFrameTime : 1 / 60;
+    prevFrameTime = time;
 
     // Opening text animation — runs before camera so camera can override
     updateOpeningText();
@@ -364,7 +367,7 @@
       ignitionAge > 0 &&
       ignitionAge < 5
     ) {
-      ignitionAge += 1 / 60;
+      ignitionAge += dt;
     }
 
     // Time-driven systems
