@@ -211,7 +211,7 @@ export function drawBgStars(
       const sd = Math.hypot(s.wx - vx, s.wy - vy);
 
       // ── Star awakening: progressive reveal from void outward ──
-      const maxDist = Math.max(canvas.width, canvas.height) / viewport.zoom;
+      const maxDist = 4000; // fixed world-distance ref — prevents stars hiding at higher zoom
       const hash = Math.abs(s.wx * 31 + s.wy * 17) % 100;
       const personalThreshold = (sd / maxDist) * 0.65 + (hash / 100) * 0.35;
       const justAwoke =
